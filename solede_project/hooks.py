@@ -43,7 +43,10 @@ app_license = "agpl-3.0"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {
+    "Quotation": "public/js/quotation.js",
+    "Project": "public/js/project.js"
+}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -137,13 +140,22 @@ app_license = "agpl-3.0"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+    "Quotation": {
+        "validate": "solede_project.api.quotation_hooks.calculate_service_totals",
+        "on_update": "solede_project.api.quotation_hooks.update_service_groups"
+    },
+    "Project": {
+        "on_update": "solede_project.api.project_hooks.sync_tasks_hours"
+    },
+    "Task": {
+        "on_update": "solede_project.api.task_hooks.calculate_actual_hours_from_timesheet"
+    },
+    "Timesheet": {
+        "on_submit": "solede_project.api.timesheet_hooks.update_task_actual_hours",
+        "on_cancel": "solede_project.api.timesheet_hooks.update_task_actual_hours"
+    }
+}
 
 # Scheduled Tasks
 # ---------------
@@ -241,4 +253,33 @@ app_license = "agpl-3.0"
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
+
+# Fixtures
+# --------
+fixtures = [
+    {
+        "dt": "Custom Field",
+        "filters": [
+            [
+                "module",
+                "in",
+                [
+                    "Solede Project",
+                ],
+            ],
+        ],
+    },
+    {
+        "dt": "Property Setter",
+        "filters": [
+            [
+                "module",
+                "in",
+                [
+                    "Solede Project",
+                ],
+            ],
+        ],
+    },
+]
 
