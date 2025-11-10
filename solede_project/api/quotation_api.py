@@ -115,6 +115,7 @@ def create_project_from_quotation(quotation_name):
                 child_task.parent_task = parent_task.name
                 child_task.quotation_item = item.name
                 child_task.service_group = group.group_name
+                child_task.activity_type = item.activity_type
 
                 # Converti giorni in ore (1 giorno = 8 ore)
                 if item.uom == "Day":
@@ -131,6 +132,7 @@ def create_project_from_quotation(quotation_name):
             task.description = item.description
             task.project = project.name
             task.quotation_item = item.name
+            task.activity_type = item.activity_type
 
             # Converti giorni in ore (1 giorno = 8 ore)
             if item.uom == "Day":

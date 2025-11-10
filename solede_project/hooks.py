@@ -45,9 +45,13 @@ app_license = "agpl-3.0"
 # include js in doctype views
 doctype_js = {
     "Quotation": "public/js/quotation.js",
-    "Project": "public/js/project.js"
+    "Project": "public/js/project.js",
+    "Task": "public/js/task.js",
+    "Timesheet": "public/js/timesheet.js"
 }
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
+doctype_list_js = {
+    "Timesheet": "public/js/timesheet_list.js"
+}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -149,9 +153,22 @@ doc_events = {
         "on_update": "solede_project.api.project_hooks.sync_tasks_hours"
     },
     "Task": {
-        "on_update": "solede_project.api.task_hooks.calculate_actual_hours_from_timesheet"
+        "on_update": [
+            "solede_project.api.task_hooks.calculate_actual_hours_from_timesheet",
+            "solede_project.api.task_hooks.handle_task_completion"
+        ]
     },
     "Timesheet": {
+        "validate": "solede_project.api.timesheet_hooks.validate_task_relationship",
+        "after_insert": [
+            "solede_project.api.timesheet_hooks.sync_task_link",
+            "solede_project.api.timesheet_hooks.update_project_costing"
+        ],
+        "on_update": [
+            "solede_project.api.timesheet_hooks.sync_task_link",
+            "solede_project.api.timesheet_hooks.sync_timer_with_task",
+            "solede_project.api.timesheet_hooks.update_project_costing"
+        ],
         "on_submit": "solede_project.api.timesheet_hooks.update_task_actual_hours",
         "on_cancel": "solede_project.api.timesheet_hooks.update_task_actual_hours"
     }
