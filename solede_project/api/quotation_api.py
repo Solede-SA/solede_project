@@ -78,6 +78,9 @@ def create_project_from_quotation(quotation_name):
     project.quotation = quotation.name
     project.expected_start_date = quotation.transaction_date
 
+    # Imposta il Project Manager (utente corrente che crea il progetto)
+    project.project_manager = frappe.session.user
+
     # Imposta billing mode
     if quotation.billing_type == "Forfait":
         project.billing_mode = "Forfait Progressivo"
