@@ -187,6 +187,7 @@ def add_manual_time(task_name, from_time, to_time, hours=None):
         "from_time": from_time,
         "to_time": to_time,
         "hours": hours,
+        "completed": 1,  # Tempo manuale è sempre completato
         "is_billable": 1
     })
 
