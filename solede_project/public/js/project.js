@@ -115,6 +115,67 @@ frappe.ui.form.on('Project', {
     }
 });
 
+function render_task_row(task, is_last) {
+    const border_style = !is_last ? 'border-bottom: 1px solid #f0f4f7;' : '';
+    let html = `<div style="padding: 12px; ${border_style} display: flex; align-items: center; gap: 15px; transition: background 0.2s;">`;
+
+    // Task subject e link
+    html += `<div style="flex: 1; min-width: 0;">`;
+    html += `<a href="/app/task/${task.name}" style="color: #2490ef; text-decoration: none; font-weight: 500; font-size: 14px;">${task.subject}</a>`;
+
+    // Assigned users
+    if (task._assign) {
+        try {
+            const assigned = JSON.parse(task._assign);
+            if (assigned.length > 0) {
+                html += `<div style="margin-top: 4px; font-size: 11px; color: #6c757d;">`;
+                html += `<i class="fa fa-user" style="margin-right: 4px;"></i>`;
+                const assignedNames = assigned.map(email => {
+                    const username = email.split('@')[0];
+                    return username.charAt(0).toUpperCase() + username.slice(1);
+                });
+                html += assignedNames.join(', ');
+                html += `</div>`;
+            }
+        } catch (e) {
+            // Ignora errori di parsing
+        }
+    }
+
+    html += `</div>`;
+
+    // Status badge
+    const status_colors = {
+        'Open': '#6c757d',
+        'Working': '#2490ef',
+        'Pending Review': '#ffc107',
+        'Completed': '#28a745',
+        'Cancelled': '#dc3545'
+    };
+    const status_color = status_colors[task.status] || '#6c757d';
+    html += `<div style="flex-shrink: 0;">`;
+    html += `<span style="background: ${status_color}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 500;">${task.status}</span>`;
+    html += `</div>`;
+
+    // Hours
+    html += `<div style="flex-shrink: 0; min-width: 80px; text-align: right; font-size: 13px; color: #6c757d;">`;
+    html += `<i class="fa fa-clock-o" style="margin-right: 4px;"></i>${task.expected_hours || 0}h / ${task.actual_hours || 0}h`;
+    html += `</div>`;
+
+    // Progress bar
+    const progress = task.progress || 0;
+    const progress_color = progress >= 100 ? '#28a745' : progress >= 50 ? '#ffc107' : '#6c757d';
+    html += `<div style="flex-shrink: 0; min-width: 120px; display: flex; align-items: center;">`;
+    html += `<div style="flex: 1; height: 8px; background: #e9ecef; border-radius: 4px; margin-right: 8px; overflow: hidden;">`;
+    html += `<div style="width: ${progress}%; height: 100%; background: ${progress_color}; transition: width 0.3s;"></div>`;
+    html += `</div>`;
+    html += `<span style="font-size: 12px; color: ${progress_color}; font-weight: 600; min-width: 35px; text-align: right;">${progress}%</span>`;
+    html += `</div>`;
+
+    html += '</div>';
+    return html;
+}
+
 async function show_grouped_tasks(frm) {
     // Recupera tutti i tasks del progetto
     const tasks = await frappe.call({
@@ -134,11 +195,14 @@ async function show_grouped_tasks(frm) {
         return;
     }
 
-    // Raggruppa i tasks per service_group
+    // Raggruppa i tasks per service_group e raccogli quelli senza gruppo
     const grouped = {};
+    const ungrouped_tasks = [];
 
     tasks.message.forEach(task => {
         if (!task.service_group) {
+            // Raccogli i task senza service_group
+            ungrouped_tasks.push(task);
             return;
         }
 
@@ -158,7 +222,11 @@ async function show_grouped_tasks(frm) {
 
     // Genera HTML
     let html = '<div style="margin-top: 20px;">';
-    html += '<h4 style="margin-bottom: 15px; color: #36414c;"><i class="fa fa-tasks" style="margin-right: 8px;"></i>Tasks by Service Group</h4>';
+
+    // Mostra header solo se ci sono task raggruppati
+    if (Object.keys(grouped).length > 0) {
+        html += '<h4 style="margin-bottom: 15px; color: #36414c;"><i class="fa fa-tasks" style="margin-right: 8px;"></i>Tasks by Service Group</h4>';
+    }
 
     for (const service_group in grouped) {
         const group_data = grouped[service_group];
@@ -184,72 +252,26 @@ async function show_grouped_tasks(frm) {
         // Tasks del gruppo
         if (group_data.children.length > 0) {
             html += '<div style="background: white; border-radius: 4px; overflow: hidden;">';
-
             group_data.children.forEach((task, index) => {
-                const border_style = index < group_data.children.length - 1 ? 'border-bottom: 1px solid #f0f4f7;' : '';
-                html += `<div style="padding: 12px; ${border_style} display: flex; align-items: center; gap: 15px; transition: background 0.2s;">`;
-
-                // Task subject e link
-                html += `<div style="flex: 1; min-width: 0;">`;
-                html += `<a href="/app/task/${task.name}" style="color: #2490ef; text-decoration: none; font-weight: 500; font-size: 14px;">${task.subject}</a>`;
-
-                // Assigned users
-                if (task._assign) {
-                    try {
-                        const assigned = JSON.parse(task._assign);
-                        if (assigned.length > 0) {
-                            html += `<div style="margin-top: 4px; font-size: 11px; color: #6c757d;">`;
-                            html += `<i class="fa fa-user" style="margin-right: 4px;"></i>`;
-                            const assignedNames = assigned.map(email => {
-                                const username = email.split('@')[0];
-                                return username.charAt(0).toUpperCase() + username.slice(1);
-                            });
-                            html += assignedNames.join(', ');
-                            html += `</div>`;
-                        }
-                    } catch (e) {
-                        // Ignora errori di parsing
-                    }
-                }
-
-                html += `</div>`;
-
-                // Status badge
-                const status_colors = {
-                    'Open': '#6c757d',
-                    'Working': '#2490ef',
-                    'Pending Review': '#ffc107',
-                    'Completed': '#28a745',
-                    'Cancelled': '#dc3545'
-                };
-                const status_color = status_colors[task.status] || '#6c757d';
-                html += `<div style="flex-shrink: 0;">`;
-                html += `<span style="background: ${status_color}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 500;">${task.status}</span>`;
-                html += `</div>`;
-
-                // Hours
-                html += `<div style="flex-shrink: 0; min-width: 80px; text-align: right; font-size: 13px; color: #6c757d;">`;
-                html += `<i class="fa fa-clock-o" style="margin-right: 4px;"></i>${task.expected_hours || 0}h / ${task.actual_hours || 0}h`;
-                html += `</div>`;
-
-                // Progress bar
-                const progress = task.progress || 0;
-                const progress_color = progress >= 100 ? '#28a745' : progress >= 50 ? '#ffc107' : '#6c757d';
-                html += `<div style="flex-shrink: 0; min-width: 120px; display: flex; align-items: center;">`;
-                html += `<div style="flex: 1; height: 8px; background: #e9ecef; border-radius: 4px; margin-right: 8px; overflow: hidden;">`;
-                html += `<div style="width: ${progress}%; height: 100%; background: ${progress_color}; transition: width 0.3s;"></div>`;
-                html += `</div>`;
-                html += `<span style="font-size: 12px; color: ${progress_color}; font-weight: 600; min-width: 35px; text-align: right;">${progress}%</span>`;
-                html += `</div>`;
-
-                html += '</div>';
+                html += render_task_row(task, index === group_data.children.length - 1);
             });
-
             html += '</div>';
         } else {
             html += '<div style="padding: 20px; text-align: center; color: #6c757d; font-style: italic;">No tasks in this group</div>';
         }
 
+        html += '</div>';
+    }
+
+    // Mostra i task non raggruppati
+    if (ungrouped_tasks.length > 0) {
+        html += '<h4 style="margin-bottom: 15px; margin-top: 25px; color: #36414c;"><i class="fa fa-list" style="margin-right: 8px;"></i>Other Tasks</h4>';
+        html += '<div style="margin-bottom: 25px; border: 1px solid #d1d8dd; border-radius: 6px; padding: 15px; background-color: #f7f9fb; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">';
+        html += '<div style="background: white; border-radius: 4px; overflow: hidden;">';
+        ungrouped_tasks.forEach((task, index) => {
+            html += render_task_row(task, index === ungrouped_tasks.length - 1);
+        });
+        html += '</div>';
         html += '</div>';
     }
 
