@@ -1,7 +1,7 @@
 // Copyright (c) 2024, Solede SA and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["Project Time Analysis"] = {
+frappe.query_reports["Task Group Analysis"] = {
 	"filters": [
 		{
 			"fieldname": "from_date",
@@ -27,41 +27,13 @@ frappe.query_reports["Project Time Analysis"] = {
 			}
 		},
 		{
-			"fieldname": "customer",
-			"label": __("Customer"),
-			"fieldtype": "MultiSelectList",
-			"options": "Customer",
-			"get_data": function(txt) {
-				return frappe.db.get_link_options('Customer', txt);
-			}
-		},
-		{
-			"fieldname": "employee",
-			"label": __("Employee"),
-			"fieldtype": "MultiSelectList",
-			"options": "Employee",
-			"get_data": function(txt) {
-				return frappe.db.get_link_options('Employee', txt);
-			}
-		},
-		{
-			"fieldname": "activity_type",
-			"label": __("Activity Type"),
-			"fieldtype": "MultiSelectList",
-			"options": "Activity Type",
-			"get_data": function(txt) {
-				return frappe.db.get_link_options('Activity Type', txt);
-			}
-		},
-		{
-			"fieldname": "task_status",
-			"label": __("Task Status"),
+			"fieldname": "parent_task",
+			"label": __("Task Group"),
 			"fieldtype": "MultiSelectList",
 			"options": "Task",
 			"get_data": function(txt) {
 				return frappe.db.get_link_options('Task', txt, {
-					'doctype': 'Task',
-					'fieldname': 'status'
+					'is_group': 1
 				});
 			}
 		},
@@ -75,8 +47,8 @@ frappe.query_reports["Project Time Analysis"] = {
 			"fieldname": "chart_type",
 			"label": __("Chart Type"),
 			"fieldtype": "Select",
-			"options": ["Bar - % Completion", "Bar - Planned vs Actual", "Pie - Hours Distribution", "Bar - Employee Breakdown"],
-			"default": "Bar - % Completion"
+			"options": ["Bar - Hours per Group", "Pie - Group Distribution", "Bar - Group Progress"],
+			"default": "Bar - Hours per Group"
 		}
 	]
 };

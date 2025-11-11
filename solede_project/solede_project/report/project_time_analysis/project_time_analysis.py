@@ -297,6 +297,8 @@ def get_chart_data(data, filters):
 		return get_planned_vs_actual_chart(project_rows)
 	elif chart_type == "Pie - Hours Distribution":
 		return get_hours_distribution_chart(project_rows)
+	elif chart_type == "Bar - Employee Breakdown":
+		return get_employee_breakdown_chart(filters)
 	else:  # Default: Bar - % Completion
 		return get_completion_chart(project_rows)
 
@@ -383,3 +385,75 @@ def get_hours_distribution_chart(project_rows):
 		"type": "pie",
 		"colors": ["#2196F3", "#4CAF50", "#FF9800", "#9C27B0", "#F44336", "#00BCD4", "#FFEB3B", "#795548", "#607D8B", "#E91E63"]
 	}
+
+
+
+def get_employee_breakdown_chart(filters):
+	"""Bar chart: Employee Breakdown by Project"""
+	conditions = get_conditions(filters)
+
+	query = f"""
+		SELECT
+			p.name as project,
+			e.employee_name,
+			SUM(tsd.hours) as hours
+		FROM `tabTimesheet Detail` tsd
+		INNER JOIN `tabTimesheet` ts ON tsd.parent = ts.name
+		INNER JOIN `tabEmployee` e ON ts.employee = e.name
+		LEFT JOIN `tabProject` p ON tsd.project = p.name
+		WHERE
+			ts.docstatus IN (0, 1)
+			AND tsd.from_time >= %(from_date)s
+			AND tsd.from_time <= %(to_date)s
+			{conditions}
+		GROUP BY p.name, e.employee_name
+		ORDER BY p.name, hours DESC
+		LIMIT 100
+	"""
+
+	data = frappe.db.sql(query, filters, as_dict=1)
+
+	if not data:
+		return None
+
+	# Group by project
+	projects = {}
+	for row in data:
+		if row.project not in projects:
+			projects[row.project] = {}
+		projects[row.project][row.employee_name] = row.hours
+
+	# Get unique employees
+	all_employees = set()
+	for proj_employees in projects.values():
+		all_employees.update(proj_employees.keys())
+
+	# Build datasets - limit to top 5 employees by total hours
+	employee_totals = {}
+	for employee in all_employees:
+		total = sum(projects[proj].get(employee, 0) for proj in projects.keys())
+		employee_totals[employee] = total
+
+	top_employees = sorted(employee_totals.items(), key=lambda x: x[1], reverse=True)[:5]
+
+	datasets = []
+	colors = ["#2196F3", "#4CAF50", "#FF9800", "#9C27B0", "#F44336"]
+	for i, (employee, _) in enumerate(top_employees):
+		dataset_values = []
+		for project in list(projects.keys())[:10]:
+			dataset_values.append(projects[project].get(employee, 0))
+
+		datasets.append({
+			"name": employee,
+			"values": dataset_values
+		})
+
+	return {
+		"data": {
+			"labels": list(projects.keys())[:10],
+			"datasets": datasets
+		},
+		"type": "bar",
+		"colors": colors
+	}
+

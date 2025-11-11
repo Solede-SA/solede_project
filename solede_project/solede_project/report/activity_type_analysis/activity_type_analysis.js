@@ -1,7 +1,7 @@
 // Copyright (c) 2024, Solede SA and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["Project Time Analysis"] = {
+frappe.query_reports["Activity Type Analysis"] = {
 	"filters": [
 		{
 			"fieldname": "from_date",
@@ -16,6 +16,15 @@ frappe.query_reports["Project Time Analysis"] = {
 			"fieldtype": "Date",
 			"default": frappe.datetime.get_today(),
 			"reqd": 1
+		},
+		{
+			"fieldname": "activity_type",
+			"label": __("Activity Type"),
+			"fieldtype": "MultiSelectList",
+			"options": "Activity Type",
+			"get_data": function(txt) {
+				return frappe.db.get_link_options('Activity Type', txt);
+			}
 		},
 		{
 			"fieldname": "project",
@@ -45,38 +54,11 @@ frappe.query_reports["Project Time Analysis"] = {
 			}
 		},
 		{
-			"fieldname": "activity_type",
-			"label": __("Activity Type"),
-			"fieldtype": "MultiSelectList",
-			"options": "Activity Type",
-			"get_data": function(txt) {
-				return frappe.db.get_link_options('Activity Type', txt);
-			}
-		},
-		{
-			"fieldname": "task_status",
-			"label": __("Task Status"),
-			"fieldtype": "MultiSelectList",
-			"options": "Task",
-			"get_data": function(txt) {
-				return frappe.db.get_link_options('Task', txt, {
-					'doctype': 'Task',
-					'fieldname': 'status'
-				});
-			}
-		},
-		{
-			"fieldname": "show_task_breakdown",
-			"label": __("Show Task Breakdown"),
-			"fieldtype": "Check",
-			"default": 1
-		},
-		{
 			"fieldname": "chart_type",
 			"label": __("Chart Type"),
 			"fieldtype": "Select",
-			"options": ["Bar - % Completion", "Bar - Planned vs Actual", "Pie - Hours Distribution", "Bar - Employee Breakdown"],
-			"default": "Bar - % Completion"
+			"options": ["Bar - Hours per Activity", "Pie - Activity Distribution", "Bar - Activity by Project"],
+			"default": "Bar - Hours per Activity"
 		}
 	]
 };
