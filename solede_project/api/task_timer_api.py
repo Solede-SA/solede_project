@@ -68,8 +68,18 @@ def start_timer(task_name, description=None):
     """, {"employee": employee, "task_name": task_name}, as_dict=True)
 
     if active_timers:
-        timer_list = ", ".join([f"{t.name} ({t.subject})" for t in active_timers])
-        frappe.throw(_("You already have an active timer running on: {0}. Please stop it before starting a new one.").format(timer_list))
+        # Crea lista HTML con link cliccabili
+        timer_links = []
+        for t in active_timers:
+            timer_links.append(f'<a href="/app/task/{t.name}" target="_blank"><b>{t.name}</b></a> ({t.subject})')
+
+        timer_list_html = ", ".join(timer_links)
+
+        frappe.throw(
+            msg=_("You already have an active timer running on: {0}. Please stop it before starting a new one.").format(timer_list_html),
+            title=_("Active Timer Found"),
+            as_list=False
+        )
 
     # Verifica o crea Timesheet
     timesheet, is_new_timesheet = get_or_create_timesheet(task, employee)
