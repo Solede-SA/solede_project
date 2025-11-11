@@ -11,65 +11,82 @@ def check_long_running_timers():
     Scheduled task: Controlla timer che stanno girando da troppo tempo
     Invia email di alert agli utenti
     """
-    settings = frappe.get_single("Project Settings")
+    # Recupera tutte le configurazioni attive
+    all_settings = frappe.get_all(
+        "Project Settings",
+        filters={"enable_long_timer_alert": 1},
+        fields=["name", "company", "max_timer_hours", "alert_frequency", "email_template"]
+    )
 
-    if not settings.enable_long_timer_alert:
+    if not all_settings:
+        frappe.logger().info("No active Project Settings found with timer alerts enabled")
         return
 
-    max_hours = settings.max_timer_hours or 8.0
+    total_timers = 0
+    total_users = 0
 
-    # Trova tutti i timer attivi che superano le ore massime
-    long_timers = frappe.db.sql("""
-        SELECT
-            t.name as task_name,
-            t.subject as task_subject,
-            t.timer_started_at,
-            t.project,
-            t.linked_timesheet,
-            ts.employee,
-            ts.name as timesheet_name,
-            e.user_id,
-            e.employee_name,
-            p.project_name,
-            p.customer,
-            c.name as company
-        FROM `tabTask` t
-        INNER JOIN `tabTimesheet` ts ON t.linked_timesheet = ts.name
-        INNER JOIN `tabEmployee` e ON ts.employee = e.name
-        LEFT JOIN `tabProject` p ON t.project = p.name
-        LEFT JOIN `tabCompany` c ON p.company = c.name
-        WHERE
-            t.timer_running = 1
-            AND t.timer_started_at IS NOT NULL
-            AND ts.docstatus = 0
-            AND TIMESTAMPDIFF(HOUR, t.timer_started_at, NOW()) >= %(max_hours)s
-    """, {"max_hours": max_hours}, as_dict=True)
+    # Per ogni company con alert attivo
+    for settings in all_settings:
+        max_hours = settings.max_timer_hours or 8.0
+        company = settings.company
 
-    if not long_timers:
-        frappe.logger().info("No long running timers found")
-        return
+        # Trova tutti i timer attivi che superano le ore massime per questa company
+        long_timers = frappe.db.sql("""
+            SELECT
+                t.name as task_name,
+                t.subject as task_subject,
+                t.timer_started_at,
+                t.project,
+                t.linked_timesheet,
+                ts.employee,
+                ts.name as timesheet_name,
+                e.user_id,
+                e.employee_name,
+                p.project_name,
+                p.customer,
+                c.name as company
+            FROM `tabTask` t
+            INNER JOIN `tabTimesheet` ts ON t.linked_timesheet = ts.name
+            INNER JOIN `tabEmployee` e ON ts.employee = e.name
+            LEFT JOIN `tabProject` p ON t.project = p.name
+            LEFT JOIN `tabCompany` c ON p.company = c.name
+            WHERE
+                t.timer_running = 1
+                AND t.timer_started_at IS NOT NULL
+                AND ts.docstatus = 0
+                AND c.name = %(company)s
+                AND TIMESTAMPDIFF(HOUR, t.timer_started_at, NOW()) >= %(max_hours)s
+        """, {"max_hours": max_hours, "company": company}, as_dict=True)
 
-    # Raggruppa per utente
-    timers_by_user = {}
-    for timer in long_timers:
-        user_id = timer.user_id
-        if user_id not in timers_by_user:
-            timers_by_user[user_id] = []
+        if not long_timers:
+            continue
 
-        # Calcola ore trascorse
-        started = get_datetime(timer.timer_started_at)
-        elapsed_hours = time_diff_in_hours(now_datetime(), started)
-        timer.elapsed_hours = elapsed_hours
+        # Raggruppa per utente
+        timers_by_user = {}
+        for timer in long_timers:
+            user_id = timer.user_id
+            if user_id not in timers_by_user:
+                timers_by_user[user_id] = []
 
-        timers_by_user[user_id].append(timer)
+            # Calcola ore trascorse
+            started = get_datetime(timer.timer_started_at)
+            elapsed_hours = time_diff_in_hours(now_datetime(), started)
+            timer.elapsed_hours = elapsed_hours
 
-    # Invia email a ciascun utente
-    for user_id, timers in timers_by_user.items():
-        # Controlla se abbiamo già inviato un alert recentemente
-        if should_send_alert(user_id, timers, settings.alert_frequency):
-            send_timer_alert_email(user_id, timers, settings)
+            timers_by_user[user_id].append(timer)
 
-    frappe.logger().info(f"Processed {len(long_timers)} long running timers for {len(timers_by_user)} users")
+        # Invia email a ciascun utente
+        for user_id, timers in timers_by_user.items():
+            # Controlla se abbiamo già inviato un alert recentemente
+            if should_send_alert(user_id, timers, settings.alert_frequency):
+                send_timer_alert_email(user_id, timers, settings)
+
+        total_timers += len(long_timers)
+        total_users += len(timers_by_user)
+
+        frappe.logger().info(f"Company {company}: Processed {len(long_timers)} long running timers for {len(timers_by_user)} users")
+
+    frappe.logger().info(f"Total: Processed {total_timers} long running timers for {total_users} users across {len(all_settings)} companies")
 
 
 def should_send_alert(user_id, timers, frequency):
@@ -171,14 +188,27 @@ def send_timer_alert_email(user_id, timers, settings):
 
 
 @frappe.whitelist()
-def test_timer_alert(user_id=None):
+def test_timer_alert(user_id=None, company=None):
     """
     API di test per verificare l'invio degli alert
     """
     if not user_id:
         user_id = frappe.session.user
 
-    settings = frappe.get_single("Project Settings")
+    if not company:
+        frappe.throw(_("Please specify a company"))
+
+    # Recupera le impostazioni per la company specificata
+    settings = frappe.get_all(
+        "Project Settings",
+        filters={"company": company},
+        fields=["name", "company", "max_timer_hours", "alert_frequency", "email_template"]
+    )
+
+    if not settings:
+        frappe.throw(_("No Project Settings found for company {0}").format(company))
+
+    settings = frappe._dict(settings[0])
 
     # Simula un timer lungo
     test_timer = frappe._dict({
@@ -188,7 +218,7 @@ def test_timer_alert(user_id=None):
         "project_name": "Test Project Name",
         "customer": "Test Customer",
         "elapsed_hours": 10.5,
-        "company": settings.company
+        "company": company
     })
 
     send_timer_alert_email(user_id, [test_timer], settings)
