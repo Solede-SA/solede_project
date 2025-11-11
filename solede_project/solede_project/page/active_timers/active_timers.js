@@ -5,34 +5,42 @@ frappe.pages['active-timers'].on_page_load = function(wrapper) {
 		single_column: true
 	});
 
-	// Add filter usando il sistema nativo di Frappe
-	page.employee_filter = page.add_field({
-		fieldtype: 'Link',
-		label: __('Employee'),
-		fieldname: 'employee',
-		options: 'Employee',
-		change: function() {
-			load_active_timers(page);
+	page.main.html(`
+		<div class="active-timers-container">
+			<div class="filter-section" style="margin-bottom: 20px;">
+				<div class="frappe-control" id="employee-filter-wrapper"></div>
+			</div>
+			<div id="timers-list"></div>
+		</div>
+	`);
+
+	// Add employee filter usando frappe.ui.form.make_control
+	page.employee_filter = frappe.ui.form.make_control({
+		df: {
+			fieldtype: 'Link',
+			label: __('Employee'),
+			fieldname: 'employee',
+			options: 'Employee',
+			placeholder: __('Select Employee'),
+			get_query: function() {
+				return {
+					filters: {
+						status: 'Active'
+					}
+				};
+			},
+			change: function() {
+				load_active_timers(page);
+			}
 		},
-		get_query: function() {
-			return {
-				filters: {
-					status: 'Active'
-				}
-			};
-		}
+		parent: page.main.find('#employee-filter-wrapper'),
+		render_input: true
 	});
 
 	// Add refresh button
 	page.add_inner_button(__('Refresh'), function() {
 		load_active_timers(page);
 	}, __('Actions'));
-
-	page.main.html(`
-		<div class="active-timers-container">
-			<div id="timers-list"></div>
-		</div>
-	`);
 
 	// Auto-load current user's employee
 	frappe.call({
