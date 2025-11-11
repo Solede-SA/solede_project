@@ -155,7 +155,11 @@ doc_events = {
     "Task": {
         "on_update": [
             "solede_project.api.task_hooks.calculate_actual_hours_from_timesheet",
-            "solede_project.api.task_hooks.handle_task_completion"
+            "solede_project.api.task_hooks.handle_task_completion",
+            "solede_project.api.task_hooks.reopen_parent_task_if_needed"
+        ],
+        "after_insert": [
+            "solede_project.api.task_hooks.reopen_parent_task_if_needed"
         ]
     },
     "Timesheet": {

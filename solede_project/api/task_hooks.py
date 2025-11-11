@@ -51,3 +51,27 @@ def handle_task_completion(doc, method=None):
         if timesheet.docstatus == 0:
             timesheet.submit()
             frappe.msgprint(f"Timesheet {timesheet.name} submitted automatically")
+
+
+def reopen_parent_task_if_needed(doc, method=None):
+    """
+    Hook: on_update, after_insert
+    Se un task viene assegnato a un parent_task (gruppo) e il task è aperto,
+    verifica se il parent_task è chiuso e riaprilo automaticamente
+    """
+    if not doc.parent_task:
+        return
+
+    # Statuses considerati "aperti" (non completati)
+    open_statuses = ["Open", "Working", "Pending Review", "Overdue"]
+
+    # Se questo task è aperto
+    if doc.status in open_statuses:
+        # Controlla lo status del parent_task
+        parent = frappe.get_doc("Task", doc.parent_task)
+
+        # Se il parent è completato o cancellato, riaprilo
+        if parent.status in ["Completed", "Cancelled"]:
+            parent.status = "Open"
+            parent.save()
+            frappe.msgprint(f"Parent task {parent.name} has been reopened because task {doc.name} is {doc.status}")
