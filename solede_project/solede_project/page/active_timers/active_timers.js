@@ -13,6 +13,13 @@ frappe.pages['active-timers'].on_page_load = function(wrapper) {
 		options: 'Employee',
 		change: function() {
 			load_active_timers(page);
+		},
+		get_query: function() {
+			return {
+				filters: {
+					status: 'Active'
+				}
+			};
 		}
 	});
 
