@@ -86,6 +86,7 @@ def start_timer(task_name, description=None):
 
     # Aggiungi riga time_log
     # IMPORTANTE: completed=0 indica timer attivo, ERPNext lo riconoscerà
+    # is_billable viene copiato dal Task
     from_time = now_datetime()
     time_log = timesheet.append("time_logs", {
         "activity_type": task.activity_type,
@@ -95,7 +96,7 @@ def start_timer(task_name, description=None):
         "to_time": None,  # Timer in corso
         "hours": 0,
         "completed": 0,  # Timer attivo (ERPNext lo riconoscerà)
-        "is_billable": 1,
+        "is_billable": 1 if task.is_billable else 0,
         "description": description or ""
     })
 
@@ -207,6 +208,7 @@ def add_manual_time(task_name, from_time, to_time, hours=None, description=None)
     timesheet, is_new_timesheet = get_or_create_timesheet(task, employee)
 
     # Aggiungi riga time_log
+    # is_billable viene copiato dal Task
     time_log = timesheet.append("time_logs", {
         "activity_type": task.activity_type,
         "task": task.name,
@@ -215,7 +217,7 @@ def add_manual_time(task_name, from_time, to_time, hours=None, description=None)
         "to_time": to_time,
         "hours": hours,
         "completed": 1,  # Tempo manuale è sempre completato
-        "is_billable": 1,
+        "is_billable": 1 if task.is_billable else 0,
         "description": description or ""
     })
 

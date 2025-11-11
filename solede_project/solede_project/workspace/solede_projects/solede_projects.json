@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"cOqdLFmP6a\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Solede Projects</span>\",\"col\":12}},{\"id\":\"yMEppHuNXI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Group\",\"col\":3}},{\"id\":\"Hh0Wds9J1g\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Template\",\"col\":3}},{\"id\":\"JaKh7z7MrK\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Activity Type\",\"col\":3}},{\"id\":\"xlnZNgMfE0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Active Timers\",\"col\":3}},{\"id\":\"tgEuQytHd-\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Project Settings\",\"col\":3}},{\"id\":\"Hvl480YcG_\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"-zykKQfO2X\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports\",\"col\":4}}]",
+ "content": "[{\"id\":\"cOqdLFmP6a\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Solede Projects</span>\",\"col\":12}},{\"id\":\"iwdPMYx5dc\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Project\",\"col\":3}},{\"id\":\"h3aiG541wF\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Task\",\"col\":3}},{\"id\":\"DY-bzBu_iB\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Timesheet\",\"col\":3}},{\"id\":\"xlnZNgMfE0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Active Timers\",\"col\":3}},{\"id\":\"Hvl480YcG_\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"-zykKQfO2X\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports\",\"col\":4}},{\"id\":\"tOoBdWEdjy\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings\",\"col\":4}}]",
  "creation": "2025-11-09 15:45:41.659114",
  "custom_blocks": [],
  "docstatus": 0,
@@ -80,9 +80,78 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Settings",
+   "link_count": 6,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Service Group",
+   "link_count": 0,
+   "link_to": "Service Group",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Service Template",
+   "link_count": 0,
+   "link_to": "Service Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Activity Type",
+   "link_count": 0,
+   "link_to": "Activity Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Project Settings",
+   "link_count": 0,
+   "link_to": "Project Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Project Template",
+   "link_count": 0,
+   "link_to": "Project Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Project Type",
+   "link_count": 0,
+   "link_to": "Project Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2025-11-11 18:41:53.215850",
+ "modified": "2025-11-11 22:02:47.354640",
  "modified_by": "lorenzo@solede.com",
  "module": "Solede Project",
  "name": "Solede Projects",
@@ -97,16 +166,8 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Activity Type",
-   "link_to": "Activity Type",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Service Group",
-   "link_to": "Service Group",
+   "label": "Project",
+   "link_to": "Project",
    "stats_filter": "[]",
    "type": "DocType"
   },
@@ -120,16 +181,16 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Project Settings",
-   "link_to": "Project Settings",
+   "label": "Task",
+   "link_to": "Task",
    "stats_filter": "[]",
    "type": "DocType"
   },
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Service Template",
-   "link_to": "Service Template",
+   "label": "Timesheet",
+   "link_to": "Timesheet",
    "stats_filter": "[]",
    "type": "DocType"
   }
