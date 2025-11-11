@@ -16,7 +16,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Reports",
-   "link_count": 2,
+   "link_count": 6,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -40,9 +40,49 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Task Time Details",
+   "link_count": 0,
+   "link_to": "Task Time Details",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Activity Type Analysis",
+   "link_count": 0,
+   "link_to": "Activity Type Analysis",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Customer Billing Summary",
+   "link_count": 0,
+   "link_to": "Customer Billing Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Task Group Analysis",
+   "link_count": 0,
+   "link_to": "Task Group Analysis",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2025-11-11 18:06:52.164632",
+ "modified": "2025-11-11 18:41:53.215850",
  "modified_by": "lorenzo@solede.com",
  "module": "Solede Project",
  "name": "Solede Projects",
