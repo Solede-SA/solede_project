@@ -6,58 +6,6 @@
  "disabled": 0,
  "docstatus": 0,
  "doctype": "Report",
- "filters": [
-  {
-   "fieldname": "from_date",
-   "label": "From Date",
-   "fieldtype": "Date",
-   "default": "frappe.datetime.add_days(frappe.datetime.get_today(), -30)",
-   "reqd": 1
-  },
-  {
-   "fieldname": "to_date",
-   "label": "To Date",
-   "fieldtype": "Date",
-   "default": "frappe.datetime.get_today()",
-   "reqd": 1
-  },
-  {
-   "fieldname": "project",
-   "label": "Project",
-   "fieldtype": "MultiSelectList",
-   "options": "Project"
-  },
-  {
-   "fieldname": "customer",
-   "label": "Customer",
-   "fieldtype": "MultiSelectList",
-   "options": "Customer"
-  },
-  {
-   "fieldname": "employee",
-   "label": "Employee",
-   "fieldtype": "MultiSelectList",
-   "options": "Employee"
-  },
-  {
-   "fieldname": "activity_type",
-   "label": "Activity Type",
-   "fieldtype": "MultiSelectList",
-   "options": "Activity Type"
-  },
-  {
-   "fieldname": "task_status",
-   "label": "Task Status",
-   "fieldtype": "MultiSelectList",
-   "options": "Task\nstatus"
-  },
-  {
-   "fieldname": "show_task_breakdown",
-   "label": "Show Task Breakdown",
-   "fieldtype": "Check",
-   "default": 1
-  }
- ],
  "idx": 0,
  "is_standard": "Yes",
  "json": "{}",

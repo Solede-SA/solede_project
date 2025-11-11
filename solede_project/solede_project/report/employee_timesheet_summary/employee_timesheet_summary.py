@@ -3,9 +3,20 @@
 
 import frappe
 from frappe import _
+from frappe.utils import add_days, today
 
 
 def execute(filters=None):
+	# Set default date range if not provided
+	if not filters:
+		filters = {}
+
+	if not filters.get("from_date"):
+		filters["from_date"] = add_days(today(), -30)
+
+	if not filters.get("to_date"):
+		filters["to_date"] = today()
+
 	columns = get_columns(filters)
 	data = get_data(filters)
 	chart = get_chart_data(data, filters)
@@ -147,9 +158,9 @@ def get_select_clause(filters):
 	elif group_by == "Day":
 		return "DATE(tsd.from_time) as period,"
 	elif group_by == "Week":
-		return "DATE_FORMAT(tsd.from_time, '%Y-W%u') as period,"
+		return "DATE_FORMAT(tsd.from_time, '%%Y-W%%u') as period,"
 	elif group_by == "Month":
-		return "DATE_FORMAT(tsd.from_time, '%Y-%m') as period,"
+		return "DATE_FORMAT(tsd.from_time, '%%Y-%%m') as period,"
 	elif group_by == "Quarter":
 		return "CONCAT(YEAR(tsd.from_time), '-Q', QUARTER(tsd.from_time)) as period,"
 
@@ -226,6 +237,18 @@ def get_chart_data(data, filters):
 	if not data:
 		return None
 
+	chart_type = filters.get("chart_type", "Bar - Hours per Employee")
+
+	if chart_type == "Pie - Billable vs Non-Billable":
+		return get_pie_chart(data)
+	elif chart_type == "Line - Trend over Time":
+		return get_line_chart(data, filters)
+	else:  # Default: Bar - Hours per Employee
+		return get_bar_chart(data, filters)
+
+
+def get_bar_chart(data, filters):
+	"""Bar chart: Hours per Employee"""
 	# For grouped data, aggregate by employee
 	if filters.get("group_by") and filters.get("group_by") != "None":
 		# Aggregate by employee across all periods
@@ -249,7 +272,7 @@ def get_chart_data(data, filters):
 		labels = [x[0] for x in sorted_data]
 		values = [x[1] for x in sorted_data]
 
-	chart = {
+	return {
 		"data": {
 			"labels": labels,
 			"datasets": [
@@ -263,4 +286,61 @@ def get_chart_data(data, filters):
 		"colors": ["#4CAF50"]
 	}
 
-	return chart
+
+def get_pie_chart(data):
+	"""Pie chart: Billable vs Non-Billable Hours"""
+	total_billable = sum(row.billable_hours for row in data)
+	total_non_billable = sum(row.non_billable_hours for row in data)
+
+	if total_billable == 0 and total_non_billable == 0:
+		return None
+
+	return {
+		"data": {
+			"labels": [_("Billable Hours"), _("Non-Billable Hours")],
+			"datasets": [
+				{
+					"values": [total_billable, total_non_billable]
+				}
+			]
+		},
+		"type": "pie",
+		"colors": ["#2196F3", "#FF9800"]
+	}
+
+
+def get_line_chart(data, filters):
+	"""Line chart: Trend over Time"""
+	group_by = filters.get("group_by")
+
+	if not group_by or group_by == "None":
+		# If no grouping, can't show trend - fallback to bar chart
+		return get_bar_chart(data, filters)
+
+	# Aggregate by period
+	period_totals = {}
+	for row in data:
+		period = row.get("period")
+		if period:
+			if period not in period_totals:
+				period_totals[period] = 0
+			period_totals[period] += row.total_hours
+
+	# Sort periods
+	sorted_periods = sorted(period_totals.keys())
+	labels = sorted_periods
+	values = [period_totals[p] for p in sorted_periods]
+
+	return {
+		"data": {
+			"labels": labels,
+			"datasets": [
+				{
+					"name": _("Total Hours"),
+					"values": values
+				}
+			]
+		},
+		"type": "line",
+		"colors": ["#9C27B0"]
+	}

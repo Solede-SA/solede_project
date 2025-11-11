@@ -3,9 +3,20 @@
 
 import frappe
 from frappe import _
+from frappe.utils import add_days, today
 
 
 def execute(filters=None):
+	# Set default date range if not provided
+	if not filters:
+		filters = {}
+
+	if not filters.get("from_date"):
+		filters["from_date"] = add_days(today(), -30)
+
+	if not filters.get("to_date"):
+		filters["to_date"] = today()
+
 	columns = get_columns(filters)
 	data = get_data(filters)
 	chart = get_chart_data(data, filters)
@@ -125,7 +136,7 @@ def get_project_summary(filters):
 			p.name as project,
 			p.customer,
 			p.status,
-			COALESCE(p.expected_time, 0) as planned_hours,
+			COALESCE(p.expected_total_hours, 0) as planned_hours,
 			COALESCE(SUM(tsd.hours), 0) as actual_hours,
 			COALESCE(SUM(CASE WHEN tsd.is_billable = 1 THEN tsd.hours ELSE 0 END), 0) as billable_hours,
 			COUNT(DISTINCT ts.employee) as employee_count,
@@ -270,7 +281,7 @@ def get_task_conditions(filters):
 
 
 def get_chart_data(data, filters):
-	"""Generate chart data showing % completion per project"""
+	"""Generate chart data based on selected chart type"""
 	if not data:
 		return None
 
@@ -280,6 +291,18 @@ def get_chart_data(data, filters):
 	if not project_rows:
 		return None
 
+	chart_type = filters.get("chart_type", "Bar - % Completion")
+
+	if chart_type == "Bar - Planned vs Actual":
+		return get_planned_vs_actual_chart(project_rows)
+	elif chart_type == "Pie - Hours Distribution":
+		return get_hours_distribution_chart(project_rows)
+	else:  # Default: Bar - % Completion
+		return get_completion_chart(project_rows)
+
+
+def get_completion_chart(project_rows):
+	"""Bar chart: % Completion per Project"""
 	# Limit to top 10 projects for readability
 	if len(project_rows) > 10:
 		project_rows = sorted(project_rows, key=lambda x: x.get("actual_hours", 0), reverse=True)[:10]
@@ -287,7 +310,7 @@ def get_chart_data(data, filters):
 	labels = [row.get("project") for row in project_rows]
 	percent_values = [row.get("percent_complete", 0) for row in project_rows]
 
-	chart = {
+	return {
 		"data": {
 			"labels": labels,
 			"datasets": [
@@ -298,13 +321,65 @@ def get_chart_data(data, filters):
 			]
 		},
 		"type": "bar",
-		"colors": ["#2196F3"],
-		"axisOptions": {
-			"xIsSeries": 1
-		},
-		"barOptions": {
-			"stacked": 0
-		}
+		"colors": ["#2196F3"]
 	}
 
-	return chart
+
+def get_planned_vs_actual_chart(project_rows):
+	"""Bar chart: Planned vs Actual Hours"""
+	# Limit to top 10 projects for readability
+	if len(project_rows) > 10:
+		project_rows = sorted(project_rows, key=lambda x: x.get("actual_hours", 0), reverse=True)[:10]
+
+	labels = [row.get("project") for row in project_rows]
+	planned_values = [row.get("planned_hours", 0) for row in project_rows]
+	actual_values = [row.get("actual_hours", 0) for row in project_rows]
+
+	return {
+		"data": {
+			"labels": labels,
+			"datasets": [
+				{
+					"name": _("Planned Hours"),
+					"values": planned_values
+				},
+				{
+					"name": _("Actual Hours"),
+					"values": actual_values
+				}
+			]
+		},
+		"type": "bar",
+		"colors": ["#4CAF50", "#FF9800"]
+	}
+
+
+def get_hours_distribution_chart(project_rows):
+	"""Pie chart: Hours Distribution across Projects"""
+	# Limit to top 10 projects for readability
+	if len(project_rows) > 10:
+		project_rows = sorted(project_rows, key=lambda x: x.get("actual_hours", 0), reverse=True)[:10]
+
+	labels = [row.get("project") for row in project_rows]
+	values = [row.get("actual_hours", 0) for row in project_rows]
+
+	# Filter out projects with 0 hours
+	filtered_data = [(l, v) for l, v in zip(labels, values) if v > 0]
+	if not filtered_data:
+		return None
+
+	labels = [x[0] for x in filtered_data]
+	values = [x[1] for x in filtered_data]
+
+	return {
+		"data": {
+			"labels": labels,
+			"datasets": [
+				{
+					"values": values
+				}
+			]
+		},
+		"type": "pie",
+		"colors": ["#2196F3", "#4CAF50", "#FF9800", "#9C27B0", "#F44336", "#00BCD4", "#FFEB3B", "#795548", "#607D8B", "#E91E63"]
+	}

@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"cOqdLFmP6a\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Solede Projects</span>\",\"col\":12}},{\"id\":\"yMEppHuNXI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Group\",\"col\":3}},{\"id\":\"Hh0Wds9J1g\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Template\",\"col\":3}},{\"id\":\"JaKh7z7MrK\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Activity Type\",\"col\":3}},{\"id\":\"xlnZNgMfE0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Active Timers\",\"col\":3}},{\"id\":\"tgEuQytHd-\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Project Settings\",\"col\":3}}]",
+ "content": "[{\"id\":\"cOqdLFmP6a\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Solede Projects</span>\",\"col\":12}},{\"id\":\"yMEppHuNXI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Group\",\"col\":3}},{\"id\":\"Hh0Wds9J1g\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Template\",\"col\":3}},{\"id\":\"JaKh7z7MrK\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Activity Type\",\"col\":3}},{\"id\":\"xlnZNgMfE0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Active Timers\",\"col\":3}},{\"id\":\"tgEuQytHd-\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Project Settings\",\"col\":3}},{\"id\":\"Hvl480YcG_\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"-zykKQfO2X\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports\",\"col\":4}}]",
  "creation": "2025-11-09 15:45:41.659114",
  "custom_blocks": [],
  "docstatus": 0,
@@ -11,8 +11,38 @@
  "indicator_color": "green",
  "is_hidden": 0,
  "label": "Solede Projects",
- "links": [],
- "modified": "2025-11-11 17:34:04.520663",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Employee Timesheet Summary",
+   "link_count": 0,
+   "link_to": "Employee Timesheet Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Project Time Analysis",
+   "link_count": 0,
+   "link_to": "Project Time Analysis",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2025-11-11 18:06:52.164632",
  "modified_by": "lorenzo@solede.com",
  "module": "Solede Project",
  "name": "Solede Projects",
