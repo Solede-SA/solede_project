@@ -8,6 +8,13 @@ frappe.ui.form.on('Project', {
             show_grouped_tasks(frm);
         }
 
+        // Button: Add Task
+        if (frm.doc.name) {
+            frm.add_custom_button(__('Add Task'), () => {
+                show_add_task_dialog(frm);
+            }, __('Create')).addClass('btn-primary');
+        }
+
         // Button: Bulk Assign Tasks
         if (frm.doc.name) {
             frm.add_custom_button(__('Bulk Assign Tasks'), () => {
@@ -185,8 +192,8 @@ async function show_grouped_tasks(frm) {
             filters: {
                 project: frm.doc.name
             },
-            fields: ['name', 'subject', 'description', 'status', 'service_group', 'parent_task', 'is_group', 'expected_hours', 'actual_hours', 'progress', '_assign'],
-            order_by: 'service_group, is_group desc, name',
+            fields: ['name', 'subject', 'description', 'status', 'parent_task', 'is_group', 'expected_hours', 'actual_hours', 'progress', '_assign'],
+            order_by: 'is_group desc, name',
             limit_page_length: 999
         }
     });
@@ -195,81 +202,83 @@ async function show_grouped_tasks(frm) {
         return;
     }
 
-    // Raggruppa i tasks per service_group e raccogli quelli senza gruppo
+    // Raggruppa i tasks usando la gerarchia nativa parent_task
     const grouped = {};
-    const ungrouped_tasks = [];
+    const root_tasks = [];
 
     tasks.message.forEach(task => {
-        if (!task.service_group) {
-            // Raccogli i task senza service_group
-            ungrouped_tasks.push(task);
-            return;
-        }
-
-        if (!grouped[task.service_group]) {
-            grouped[task.service_group] = {
-                parent: null,
+        if (task.is_group) {
+            // Task di tipo gruppo
+            grouped[task.name] = {
+                parent: task,
                 children: []
             };
         }
+    });
 
-        if (task.is_group) {
-            grouped[task.service_group].parent = task;
-        } else {
-            grouped[task.service_group].children.push(task);
+    tasks.message.forEach(task => {
+        if (!task.is_group) {
+            if (task.parent_task && grouped[task.parent_task]) {
+                // Ha un parent, aggiungilo ai children
+                grouped[task.parent_task].children.push(task);
+            } else {
+                // Task root senza parent
+                root_tasks.push(task);
+            }
         }
     });
 
     // Genera HTML
     let html = '<div style="margin-top: 20px;">';
 
-    // Mostra header solo se ci sono task raggruppati
+    // Mostra i gruppi con i loro children
     if (Object.keys(grouped).length > 0) {
-        html += '<h4 style="margin-bottom: 15px; color: #36414c;"><i class="fa fa-tasks" style="margin-right: 8px;"></i>Tasks by Service Group</h4>';
-    }
+        html += '<h4 style="margin-bottom: 15px; color: #36414c;"><i class="fa fa-tasks" style="margin-right: 8px;"></i>Task Groups</h4>';
 
-    for (const service_group in grouped) {
-        const group_data = grouped[service_group];
-        const parent = group_data.parent;
+        for (const group_name in grouped) {
+            const group_data = grouped[group_name];
+            const parent = group_data.parent;
 
-        html += '<div style="margin-bottom: 25px; border: 1px solid #d1d8dd; border-radius: 6px; padding: 15px; background-color: #f7f9fb; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">';
+            html += '<div style="margin-bottom: 25px; border: 1px solid #d1d8dd; border-radius: 6px; padding: 15px; background-color: #f7f9fb; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">';
 
-        // Header del gruppo
-        html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px solid #e0e6eb;">';
-        html += `<h5 style="margin: 0; color: #36414c; font-size: 16px;"><i class="fa fa-folder-open" style="margin-right: 8px; color: #5e64ff;"></i>${service_group}</h5>`;
+            // Header del gruppo
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px solid #e0e6eb;">';
+            html += `<h5 style="margin: 0; color: #36414c; font-size: 16px;">`;
+            html += `<a href="/app/task/${parent.name}" style="color: #36414c; text-decoration: none;">`;
+            html += `<i class="fa fa-folder-open" style="margin-right: 8px; color: #5e64ff;"></i>${parent.subject}`;
+            html += `</a></h5>`;
 
-        if (parent) {
             const progress_color = parent.progress >= 100 ? '#28a745' : parent.progress >= 50 ? '#ffc107' : '#6c757d';
             html += `<div style="display: flex; align-items: center; gap: 15px; font-size: 13px;">`;
             html += `<span style="color: ${progress_color}; font-weight: bold; font-size: 16px;">${parent.progress || 0}%</span>`;
             html += `<span style="color: #6c757d;"><i class="fa fa-clock-o" style="margin-right: 4px;"></i>${parent.expected_hours || 0}h planned</span>`;
             html += `<span style="color: #6c757d;"><i class="fa fa-check-circle" style="margin-right: 4px;"></i>${parent.actual_hours || 0}h spent</span>`;
             html += `</div>`;
-        }
 
-        html += '</div>';
-
-        // Tasks del gruppo
-        if (group_data.children.length > 0) {
-            html += '<div style="background: white; border-radius: 4px; overflow: hidden;">';
-            group_data.children.forEach((task, index) => {
-                html += render_task_row(task, index === group_data.children.length - 1);
-            });
             html += '</div>';
-        } else {
-            html += '<div style="padding: 20px; text-align: center; color: #6c757d; font-style: italic;">No tasks in this group</div>';
-        }
 
-        html += '</div>';
+            // Tasks del gruppo
+            if (group_data.children.length > 0) {
+                html += '<div style="background: white; border-radius: 4px; overflow: hidden;">';
+                group_data.children.forEach((task, index) => {
+                    html += render_task_row(task, index === group_data.children.length - 1);
+                });
+                html += '</div>';
+            } else {
+                html += '<div style="padding: 20px; text-align: center; color: #6c757d; font-style: italic;">No tasks in this group</div>';
+            }
+
+            html += '</div>';
+        }
     }
 
-    // Mostra i task non raggruppati
-    if (ungrouped_tasks.length > 0) {
+    // Mostra i task root (senza parent)
+    if (root_tasks.length > 0) {
         html += '<h4 style="margin-bottom: 15px; margin-top: 25px; color: #36414c;"><i class="fa fa-list" style="margin-right: 8px;"></i>Other Tasks</h4>';
         html += '<div style="margin-bottom: 25px; border: 1px solid #d1d8dd; border-radius: 6px; padding: 15px; background-color: #f7f9fb; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">';
         html += '<div style="background: white; border-radius: 4px; overflow: hidden;">';
-        ungrouped_tasks.forEach((task, index) => {
-            html += render_task_row(task, index === ungrouped_tasks.length - 1);
+        root_tasks.forEach((task, index) => {
+            html += render_task_row(task, index === root_tasks.length - 1);
         });
         html += '</div>';
         html += '</div>';
@@ -277,7 +286,7 @@ async function show_grouped_tasks(frm) {
 
     html += '</div>';
 
-    // Popola il campo HTML "tasks_html" invece della dashboard
+    // Popola il campo HTML "tasks_html"
     if (frm.fields_dict.tasks_html) {
         frm.fields_dict.tasks_html.$wrapper.html(html);
     }
@@ -293,8 +302,8 @@ async function show_bulk_assignment_dialog(frm) {
                 project: frm.doc.name,
                 is_group: 0  // Solo child tasks, non i parent groups
             },
-            fields: ['name', 'subject', 'service_group', 'status', '_assign'],
-            order_by: 'service_group, name',
+            fields: ['name', 'subject', 'parent_task', 'status', '_assign'],
+            order_by: 'parent_task, name',
             limit_page_length: 999
         }
     });
@@ -306,8 +315,29 @@ async function show_bulk_assignment_dialog(frm) {
 
     const tasks = tasks_response.message;
 
-    // Raggruppa tasks per service_group
-    const service_groups = [...new Set(tasks.map(t => t.service_group).filter(Boolean))];
+    // Ottieni i parent task con i loro subject
+    const parent_task_ids = [...new Set(tasks.map(t => t.parent_task).filter(Boolean))];
+
+    let parent_tasks_map = {};
+    if (parent_task_ids.length > 0) {
+        const parent_tasks_response = await frappe.call({
+            method: 'frappe.client.get_list',
+            args: {
+                doctype: 'Task',
+                filters: {
+                    name: ['in', parent_task_ids]
+                },
+                fields: ['name', 'subject']
+            }
+        });
+
+        parent_tasks_response.message.forEach(pt => {
+            parent_tasks_map[pt.name] = `${pt.name} - ${pt.subject}`;
+        });
+    }
+
+    // Crea le opzioni per il dropdown
+    const parent_task_options = ['All', ...Object.values(parent_tasks_map)];
 
     // Crea il dialog
     const dialog = new frappe.ui.Dialog({
@@ -319,10 +349,10 @@ async function show_bulk_assignment_dialog(frm) {
                 label: __('Filter Tasks')
             },
             {
-                fieldname: 'service_group_filter',
+                fieldname: 'parent_task_filter',
                 fieldtype: 'Select',
-                label: __('Filter by Service Group'),
-                options: ['All', ...service_groups],
+                label: __('Filter by Parent Task'),
+                options: parent_task_options,
                 default: 'All',
                 onchange: function() {
                     update_tasks_list();
@@ -441,13 +471,19 @@ async function show_bulk_assignment_dialog(frm) {
 
     // Funzione per aggiornare la lista dei tasks
     function update_tasks_list() {
-        const service_group_filter = dialog.get_value('service_group_filter');
+        const parent_task_filter_value = dialog.get_value('parent_task_filter');
         const status_filter = dialog.get_value('status_filter');
 
+        // Estrai il nome del task dalla selezione (formato: "TASK-XXX - Subject")
+        let parent_task_filter = parent_task_filter_value;
+        if (parent_task_filter_value && parent_task_filter_value !== 'All') {
+            parent_task_filter = parent_task_filter_value.split(' - ')[0];
+        }
+
         let filtered_tasks = tasks.filter(task => {
-            const group_match = service_group_filter === 'All' || task.service_group === service_group_filter;
+            const parent_match = parent_task_filter === 'All' || task.parent_task === parent_task_filter;
             const status_match = status_filter === 'All' || task.status === status_filter;
-            return group_match && status_match;
+            return parent_match && status_match;
         });
 
         let html = '<div style="max-height: 400px; overflow-y: auto;">';
@@ -456,7 +492,7 @@ async function show_bulk_assignment_dialog(frm) {
         html += '<tr>';
         html += '<th style="width: 50px; text-align: center;"><input type="checkbox" id="select-all-checkbox"></th>';
         html += '<th>Task</th>';
-        html += '<th style="width: 150px;">Service Group</th>';
+        html += '<th style="width: 150px;">Parent Task</th>';
         html += '<th style="width: 120px;">Status</th>';
         html += '<th style="width: 150px;">Assigned To</th>';
         html += '</tr>';
@@ -467,10 +503,13 @@ async function show_bulk_assignment_dialog(frm) {
             const assigned = task._assign ? JSON.parse(task._assign) : [];
             const assigned_text = assigned.length ? assigned.map(u => u.split('@')[0]).join(', ') : 'Not assigned';
 
+            // Mostra parent task con subject se disponibile
+            const parent_display = task.parent_task ? (parent_tasks_map[task.parent_task] || task.parent_task) : '-';
+
             html += `<tr data-task-name="${task.name}">`;
             html += `<td style="text-align: center;"><input type="checkbox" class="task-checkbox" data-task-name="${task.name}" ${selected_tasks.includes(task.name) ? 'checked' : ''}></td>`;
             html += `<td><a href="/app/task/${task.name}" target="_blank">${task.subject}</a></td>`;
-            html += `<td>${task.service_group || '-'}</td>`;
+            html += `<td style="font-size: 12px;">${parent_display}</td>`;
             html += `<td><span class="badge badge-${get_status_color(task.status)}">${task.status}</span></td>`;
             html += `<td style="font-size: 12px; color: #6c757d;">${assigned_text}</td>`;
             html += '</tr>';
@@ -596,5 +635,198 @@ async function show_bulk_assignment_dialog(frm) {
 
     // Inizializza la lista
     update_tasks_list();
+    dialog.show();
+}
+
+async function show_add_task_dialog(frm) {
+    // Recupera tutti i task di tipo gruppo per popolare il dropdown parent_task
+    const group_tasks_response = await frappe.call({
+        method: 'frappe.client.get_list',
+        args: {
+            doctype: 'Task',
+            filters: {
+                project: frm.doc.name,
+                is_group: 1
+            },
+            fields: ['name', 'subject'],
+            order_by: 'name',
+            limit_page_length: 999
+        }
+    });
+
+    const group_tasks = group_tasks_response.message || [];
+    const parent_task_options = group_tasks.map(t => ({ label: t.subject, value: t.name }));
+
+    const dialog = new frappe.ui.Dialog({
+        title: __('Add New Task'),
+        size: 'large',
+        fields: [
+            {
+                fieldtype: 'Section Break',
+                label: __('Basic Information')
+            },
+            {
+                fieldname: 'subject',
+                fieldtype: 'Data',
+                label: __('Task Subject'),
+                reqd: 1
+            },
+            {
+                fieldname: 'is_group',
+                fieldtype: 'Check',
+                label: __('Is Group Task'),
+                description: __('Check this if this task is a parent/group task')
+            },
+            {
+                fieldtype: 'Column Break'
+            },
+            {
+                fieldname: 'parent_task',
+                fieldtype: 'Link',
+                label: __('Parent Task'),
+                options: 'Task',
+                get_query: function() {
+                    return {
+                        filters: {
+                            project: frm.doc.name,
+                            is_group: 1
+                        }
+                    };
+                },
+                description: __('Select a group task to organize this task under')
+            },
+            {
+                fieldname: 'is_milestone',
+                fieldtype: 'Check',
+                label: __('Is Milestone')
+            },
+            {
+                fieldtype: 'Section Break',
+                label: __('Details')
+            },
+            {
+                fieldname: 'description',
+                fieldtype: 'Text Editor',
+                label: __('Task Description')
+            },
+            {
+                fieldtype: 'Section Break',
+                label: __('Planning')
+            },
+            {
+                fieldname: 'activity_type',
+                fieldtype: 'Link',
+                label: __('Activity Type'),
+                options: 'Activity Type',
+                description: __('Required for time tracking')
+            },
+            {
+                fieldname: 'expected_hours',
+                fieldtype: 'Float',
+                label: __('Expected Hours'),
+                default: 0
+            },
+            {
+                fieldtype: 'Column Break'
+            },
+            {
+                fieldname: 'exp_start_date',
+                fieldtype: 'Date',
+                label: __('Expected Start Date')
+            },
+            {
+                fieldname: 'exp_end_date',
+                fieldtype: 'Date',
+                label: __('Expected End Date')
+            },
+            {
+                fieldtype: 'Section Break',
+                label: __('Assignment')
+            },
+            {
+                fieldname: 'assign_to_users',
+                fieldtype: 'MultiSelectPills',
+                label: __('Assign To'),
+                get_data: function(txt) {
+                    return frappe.db.get_link_options('User', txt, {
+                        user_type: 'System User',
+                        enabled: 1
+                    });
+                }
+            },
+            {
+                fieldname: 'priority',
+                fieldtype: 'Select',
+                label: __('Priority'),
+                options: ['Low', 'Medium', 'High', 'Urgent'],
+                default: 'Medium'
+            }
+        ],
+        primary_action_label: __('Create Task'),
+        primary_action: async function(values) {
+            frappe.dom.freeze(__('Creating task...'));
+
+            try {
+                // Crea il task
+                const task = await frappe.call({
+                    method: 'frappe.client.insert',
+                    args: {
+                        doc: {
+                            doctype: 'Task',
+                            subject: values.subject,
+                            project: frm.doc.name,
+                            company: frm.doc.company,
+                            is_group: values.is_group || 0,
+                            parent_task: values.parent_task || null,
+                            is_milestone: values.is_milestone || 0,
+                            description: values.description || '',
+                            activity_type: values.activity_type || null,
+                            expected_hours: values.expected_hours || 0,
+                            exp_start_date: values.exp_start_date || null,
+                            exp_end_date: values.exp_end_date || null,
+                            priority: values.priority || 'Medium',
+                            status: 'Open'
+                        }
+                    }
+                });
+
+                // Se ci sono utenti da assegnare, usa l'API di assignment
+                if (values.assign_to_users && values.assign_to_users.length > 0) {
+                    await frappe.call({
+                        method: 'frappe.desk.form.assign_to.add',
+                        args: {
+                            assign_to: values.assign_to_users,
+                            doctype: 'Task',
+                            name: task.message.name,
+                            description: `Task created from project ${frm.doc.name}`,
+                            priority: values.priority || 'Medium'
+                        }
+                    });
+                }
+
+                frappe.dom.unfreeze();
+
+                dialog.hide();
+
+                // Refresh la visualizzazione dei tasks
+                await show_grouped_tasks(frm);
+
+                // Mostra messaggio di successo con link al task
+                frappe.show_alert({
+                    message: __('Task {0} created successfully', [`<a href="/app/task/${task.message.name}" target="_blank">${task.message.name}</a>`]),
+                    indicator: 'green'
+                }, 5);
+
+            } catch (error) {
+                frappe.dom.unfreeze();
+                frappe.msgprint({
+                    title: __('Error'),
+                    message: __('Failed to create task: ') + error.message,
+                    indicator: 'red'
+                });
+            }
+        }
+    });
+
     dialog.show();
 }

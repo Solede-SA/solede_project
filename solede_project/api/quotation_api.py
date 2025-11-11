@@ -93,7 +93,7 @@ def create_project_from_quotation(quotation_name):
 
     project.insert()
 
-    # Crea Tasks da Service Groups
+    # Crea Tasks da Service Groups usando la gerarchia nativa parent_task
     if quotation.service_groups:
         for group in quotation.service_groups:
             # Crea Parent Task per il gruppo
@@ -101,7 +101,6 @@ def create_project_from_quotation(quotation_name):
             parent_task.subject = group.group_name
             parent_task.description = group.description
             parent_task.project = project.name
-            parent_task.service_group = group.group_name
             parent_task.is_group = 1
             parent_task.insert()
 
@@ -114,7 +113,6 @@ def create_project_from_quotation(quotation_name):
                 child_task.project = project.name
                 child_task.parent_task = parent_task.name
                 child_task.quotation_item = item.name
-                child_task.service_group = group.group_name
                 child_task.activity_type = item.activity_type
 
                 # Converti giorni in ore (1 giorno = 8 ore)
