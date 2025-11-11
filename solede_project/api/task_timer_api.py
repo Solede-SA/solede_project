@@ -55,6 +55,22 @@ def start_timer(task_name, description=None):
     if not employee:
         frappe.throw(_("No Employee record found for user {0}. Please create an Employee record first.").format(frappe.session.user))
 
+    # Verifica che l'employee non abbia già altri timer attivi
+    active_timers = frappe.db.sql("""
+        SELECT t.name, t.subject
+        FROM `tabTask` t
+        INNER JOIN `tabTimesheet` ts ON t.linked_timesheet = ts.name
+        WHERE
+            t.timer_running = 1
+            AND ts.employee = %(employee)s
+            AND ts.docstatus = 0
+            AND t.name != %(task_name)s
+    """, {"employee": employee, "task_name": task_name}, as_dict=True)
+
+    if active_timers:
+        timer_list = ", ".join([f"{t.name} ({t.subject})" for t in active_timers])
+        frappe.throw(_("You already have an active timer running on: {0}. Please stop it before starting a new one.").format(timer_list))
+
     # Verifica o crea Timesheet
     timesheet, is_new_timesheet = get_or_create_timesheet(task, employee)
 
