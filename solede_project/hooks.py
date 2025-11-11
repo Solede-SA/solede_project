@@ -177,23 +177,11 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"solede_project.tasks.all"
-# 	],
-# 	"daily": [
-# 		"solede_project.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"solede_project.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"solede_project.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"solede_project.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"hourly": [
+		"solede_project.api.timer_alert_api.check_long_running_timers"
+	]
+}
 
 # Testing
 # -------

@@ -1,0 +1,100 @@
+{
+ "actions": [],
+ "creation": "2025-11-11 17:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "timer_settings_section",
+  "enable_long_timer_alert",
+  "max_timer_hours",
+  "column_break_1",
+  "alert_frequency",
+  "email_template_section",
+  "email_template"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "timer_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Timer Alert Settings"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_long_timer_alert",
+   "fieldtype": "Check",
+   "label": "Enable Long Running Timer Alert"
+  },
+  {
+   "default": "8",
+   "depends_on": "eval:doc.enable_long_timer_alert",
+   "description": "Send alert if timer runs for more than these hours",
+   "fieldname": "max_timer_hours",
+   "fieldtype": "Float",
+   "label": "Alert After Hours",
+   "precision": "1"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Once",
+   "depends_on": "eval:doc.enable_long_timer_alert",
+   "fieldname": "alert_frequency",
+   "fieldtype": "Select",
+   "label": "Alert Frequency",
+   "options": "Once\nEvery Hour\nEvery 2 Hours"
+  },
+  {
+   "fieldname": "email_template_section",
+   "fieldtype": "Section Break",
+   "label": "Email Template"
+  },
+  {
+   "depends_on": "eval:doc.enable_long_timer_alert",
+   "description": "Template for long timer alert email",
+   "fieldname": "email_template",
+   "fieldtype": "Link",
+   "label": "Email Template",
+   "options": "Email Template"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-11-11 17:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Solede Project",
+ "name": "Project Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Projects Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
