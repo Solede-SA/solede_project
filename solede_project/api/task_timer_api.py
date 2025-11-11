@@ -228,3 +228,61 @@ def get_timer_status(task_name):
         "actual_hours": task.actual_hours or 0,
         "expected_hours": task.expected_hours or 0
     }
+
+
+@frappe.whitelist()
+def get_active_timers(employee=None):
+    """
+    Recupera tutti i timer attivi
+    Se employee è specificato, filtra per quell'employee
+    Altrimenti mostra i timer dell'utente corrente
+    """
+    # Se non è specificato employee, usa quello dell'utente corrente
+    if not employee:
+        employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
+        if not employee:
+            return []
+
+    # Recupera tutti i task con timer running per questo employee
+    # Verifica che il timesheet collegato appartenga all'employee
+    active_timers = frappe.db.sql("""
+        SELECT
+            t.name as task_name,
+            t.subject as task_subject,
+            t.timer_started_at,
+            t.project,
+            t.activity_type,
+            t.linked_timesheet,
+            ts.employee,
+            p.project_name,
+            p.customer
+        FROM `tabTask` t
+        LEFT JOIN `tabTimesheet` ts ON t.linked_timesheet = ts.name
+        LEFT JOIN `tabProject` p ON t.project = p.name
+        WHERE
+            t.timer_running = 1
+            AND ts.employee = %(employee)s
+            AND ts.docstatus = 0
+        ORDER BY t.timer_started_at DESC
+    """, {"employee": employee}, as_dict=True)
+
+    # Calcola elapsed time per ogni timer
+    for timer in active_timers:
+        if timer.timer_started_at:
+            started = get_datetime(timer.timer_started_at)
+            now = now_datetime()
+            elapsed_seconds = (now - started).total_seconds()
+            timer.elapsed_hours = elapsed_seconds / 3600
+            timer.elapsed_formatted = format_elapsed_time(elapsed_seconds)
+
+    return active_timers
+
+
+def format_elapsed_time(seconds):
+    """
+    Formatta secondi in HH:MM:SS
+    """
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"

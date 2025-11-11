@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"cOqdLFmP6a\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Solede Projects</span>\",\"col\":12}},{\"id\":\"yMEppHuNXI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Group\",\"col\":3}},{\"id\":\"Hh0Wds9J1g\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Template\",\"col\":3}},{\"id\":\"JaKh7z7MrK\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Activity Type\",\"col\":3}}]",
+ "content": "[{\"id\":\"cOqdLFmP6a\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Solede Projects</span>\",\"col\":12}},{\"id\":\"activeTimersShortcut\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Active Timers\",\"col\":3}},{\"id\":\"yMEppHuNXI\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Group\",\"col\":3}},{\"id\":\"Hh0Wds9J1g\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Service Template\",\"col\":3}},{\"id\":\"JaKh7z7MrK\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Activity Type\",\"col\":3}}]",
  "creation": "2025-11-09 15:45:41.659114",
  "custom_blocks": [],
  "docstatus": 0,
@@ -24,6 +24,14 @@
  "roles": [],
  "sequence_id": 39.0,
  "shortcuts": [
+  {
+   "color": "Red",
+   "doc_view": "",
+   "label": "Active Timers",
+   "link_to": "active-timers",
+   "stats_filter": "[]",
+   "type": "Page"
+  },
   {
    "color": "Grey",
    "doc_view": "List",
