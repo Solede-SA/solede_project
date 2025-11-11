@@ -5,35 +5,27 @@ frappe.pages['active-timers'].on_page_load = function(wrapper) {
 		single_column: true
 	});
 
+	// Add filter usando il sistema nativo di Frappe
+	page.employee_filter = page.add_field({
+		fieldtype: 'Link',
+		label: __('Employee'),
+		fieldname: 'employee',
+		options: 'Employee',
+		change: function() {
+			load_active_timers(page);
+		}
+	});
+
+	// Add refresh button
+	page.add_inner_button(__('Refresh'), function() {
+		load_active_timers(page);
+	}, __('Actions'));
+
 	page.main.html(`
 		<div class="active-timers-container">
-			<div class="filter-section" style="margin-bottom: 20px; padding: 15px; background: #f7f9fb; border-radius: 6px;">
-				<div style="display: flex; gap: 15px; align-items: center;">
-					<label style="font-weight: 600;">Filter by Employee:</label>
-					<div id="employee-filter" style="flex: 1; max-width: 300px;"></div>
-					<button class="btn btn-primary btn-sm" id="refresh-timers">
-						<i class="fa fa-refresh"></i> Refresh
-					</button>
-				</div>
-			</div>
 			<div id="timers-list"></div>
 		</div>
 	`);
-
-	// Create employee filter
-	let employee_field = frappe.ui.form.make_control({
-		parent: page.main.find('#employee-filter'),
-		df: {
-			fieldtype: 'Link',
-			options: 'Employee',
-			fieldname: 'employee',
-			placeholder: __('All (Current User)'),
-			onchange: function() {
-				load_active_timers(page);
-			}
-		},
-		render_input: true
-	});
 
 	// Auto-load current user's employee
 	frappe.call({
@@ -45,19 +37,16 @@ frappe.pages['active-timers'].on_page_load = function(wrapper) {
 		},
 		callback: function(r) {
 			if (r.message && r.message.name) {
-				employee_field.set_value(r.message.name);
+				page.employee_filter.set_value(r.message.name);
+			} else {
+				load_active_timers(page);
 			}
 		}
 	});
 
-	// Refresh button
-	page.main.find('#refresh-timers').on('click', function() {
-		load_active_timers(page);
-	});
-
 	// Function to load active timers
 	function load_active_timers(page) {
-		const employee = employee_field.get_value();
+		const employee = page.employee_filter.get_value();
 
 		frappe.call({
 			method: 'solede_project.api.task_timer_api.get_active_timers',
