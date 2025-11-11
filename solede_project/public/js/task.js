@@ -133,29 +133,48 @@ function start_timer(frm) {
         return;
     }
 
-    frappe.dom.freeze(__('Starting timer...'));
-
-    frappe.call({
-        method: 'solede_project.api.task_timer_api.start_timer',
-        args: {
-            task_name: frm.doc.name
-        },
-        callback: function(r) {
-            frappe.dom.unfreeze();
-
-            if (r.message && r.message.success) {
-                frappe.show_alert({
-                    message: __('Timer started'),
-                    indicator: 'green'
-                }, 3);
-
-                frm.reload_doc();
+    // Mostra dialog per inserire descrizione opzionale
+    const d = new frappe.ui.Dialog({
+        title: __('Start Timer'),
+        fields: [
+            {
+                fieldname: 'description',
+                fieldtype: 'Small Text',
+                label: __('Description'),
+                description: __('Optional comment for this time log')
             }
-        },
-        error: function(r) {
-            frappe.dom.unfreeze();
+        ],
+        primary_action_label: __('Start Timer'),
+        primary_action: function(values) {
+            frappe.dom.freeze(__('Starting timer...'));
+
+            frappe.call({
+                method: 'solede_project.api.task_timer_api.start_timer',
+                args: {
+                    task_name: frm.doc.name,
+                    description: values.description
+                },
+                callback: function(r) {
+                    frappe.dom.unfreeze();
+
+                    if (r.message && r.message.success) {
+                        frappe.show_alert({
+                            message: __('Timer started'),
+                            indicator: 'green'
+                        }, 3);
+
+                        d.hide();
+                        frm.reload_doc();
+                    }
+                },
+                error: function(r) {
+                    frappe.dom.unfreeze();
+                }
+            });
         }
     });
+
+    d.show();
 }
 
 function stop_timer(frm) {
@@ -218,6 +237,12 @@ function show_manual_time_dialog(frm) {
                 label: __('Hours'),
                 description: __('Leave empty to auto-calculate from time range'),
                 precision: 2
+            },
+            {
+                fieldname: 'description',
+                fieldtype: 'Small Text',
+                label: __('Description'),
+                description: __('Optional comment for this time log')
             }
         ],
         primary_action_label: __('Add Time'),
@@ -230,7 +255,8 @@ function show_manual_time_dialog(frm) {
                     task_name: frm.doc.name,
                     from_time: values.from_time,
                     to_time: values.to_time,
-                    hours: values.hours
+                    hours: values.hours,
+                    description: values.description
                 },
                 callback: function(r) {
                     frappe.dom.unfreeze();

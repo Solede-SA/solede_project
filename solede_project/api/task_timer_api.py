@@ -37,7 +37,7 @@ def get_or_create_timesheet(task, employee):
 
 
 @frappe.whitelist()
-def start_timer(task_name):
+def start_timer(task_name, description=None):
     """
     Avvia il timer per un task
     """
@@ -69,7 +69,8 @@ def start_timer(task_name):
         "to_time": None,  # Timer in corso
         "hours": 0,
         "completed": 0,  # Timer attivo (ERPNext lo riconoscerà)
-        "is_billable": 1
+        "is_billable": 1,
+        "description": description or ""
     })
 
     if is_new_timesheet:
@@ -149,7 +150,7 @@ def stop_timer(task_name):
 
 
 @frappe.whitelist()
-def add_manual_time(task_name, from_time, to_time, hours=None):
+def add_manual_time(task_name, from_time, to_time, hours=None, description=None):
     """
     Aggiunge tempo manualmente
     """
@@ -188,7 +189,8 @@ def add_manual_time(task_name, from_time, to_time, hours=None):
         "to_time": to_time,
         "hours": hours,
         "completed": 1,  # Tempo manuale è sempre completato
-        "is_billable": 1
+        "is_billable": 1,
+        "description": description or ""
     })
 
     if is_new_timesheet:

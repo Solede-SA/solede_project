@@ -144,6 +144,12 @@ function show_custom_timer_dialog(frm, row, timestamp, task) {
                 fieldname: "expected_hours"
             },
             {
+                fieldtype: "Small Text",
+                label: __("Description"),
+                fieldname: "description",
+                description: __("Optional comment for this time log")
+            },
+            {
                 fieldtype: "Section Break"
             },
             {
@@ -158,7 +164,8 @@ function show_custom_timer_dialog(frm, row, timestamp, task) {
             activity_type: task.activity_type,
             project: task.project,
             task: task.name,
-            expected_hours: row.expected_hours
+            expected_hours: row.expected_hours,
+            description: row.description || ""
         });
     }
 
@@ -215,6 +222,7 @@ function control_custom_timer(frm, dialog, row, timestamp, task) {
             row.project = task.project;
             row.task = task.name;
             row.expected_hours = args.expected_hours;
+            row.description = args.description || "";
             row.completed = 0;
             row.is_billable = 1;
 
