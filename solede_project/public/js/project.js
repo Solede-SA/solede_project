@@ -3,9 +3,10 @@
 
 frappe.ui.form.on('Project', {
     refresh: function(frm) {
-        // Mostra i tasks raggruppati per Service Group
+        // Mostra i tasks attivi e conclusi
         if (frm.doc.name) {
-            show_grouped_tasks(frm);
+            show_grouped_tasks(frm, 'active');
+            show_grouped_tasks(frm, 'completed');
         }
 
         // Button: Add Task
@@ -183,7 +184,7 @@ function render_task_row(task, is_last) {
     return html;
 }
 
-async function show_grouped_tasks(frm) {
+async function show_grouped_tasks(frm, filter_type = 'active') {
     // Recupera tutti i tasks del progetto
     const tasks = await frappe.call({
         method: 'frappe.client.get_list',
@@ -202,11 +203,28 @@ async function show_grouped_tasks(frm) {
         return;
     }
 
+    // Status considerati "conclusi"
+    const completed_statuses = ['Completed', 'Cancelled'];
+
+    // Filtra i task in base al tipo
+    let filtered_tasks = tasks.message;
+    if (filter_type === 'completed') {
+        // Mostra solo task conclusi (status Completed o Cancelled)
+        filtered_tasks = tasks.message.filter(task => completed_statuses.includes(task.status));
+    } else {
+        // Mostra solo task attivi (non Completed/Cancelled)
+        filtered_tasks = tasks.message.filter(task => !completed_statuses.includes(task.status));
+    }
+
+    if (filtered_tasks.length === 0) {
+        return;
+    }
+
     // Raggruppa i tasks usando la gerarchia nativa parent_task
     const grouped = {};
     const root_tasks = [];
 
-    tasks.message.forEach(task => {
+    filtered_tasks.forEach(task => {
         if (task.is_group) {
             // Task di tipo gruppo
             grouped[task.name] = {
@@ -216,7 +234,7 @@ async function show_grouped_tasks(frm) {
         }
     });
 
-    tasks.message.forEach(task => {
+    filtered_tasks.forEach(task => {
         if (!task.is_group) {
             if (task.parent_task && grouped[task.parent_task]) {
                 // Ha un parent, aggiungilo ai children
@@ -227,6 +245,27 @@ async function show_grouped_tasks(frm) {
             }
         }
     });
+
+    // Se filter_type è 'completed', rimuovi gruppi senza children (tutti i children sono completati in un altro gruppo)
+    if (filter_type === 'completed') {
+        for (const group_name in grouped) {
+            if (grouped[group_name].children.length === 0) {
+                delete grouped[group_name];
+            }
+        }
+    }
+
+    // Se filter_type è 'active', rimuovi gruppi dove tutti i children sono completati
+    if (filter_type === 'active') {
+        for (const group_name in grouped) {
+            const all_children_completed = grouped[group_name].children.every(child =>
+                completed_statuses.includes(child.status)
+            );
+            if (all_children_completed && grouped[group_name].children.length > 0) {
+                delete grouped[group_name];
+            }
+        }
+    }
 
     // Genera HTML
     let html = '<div style="margin-top: 20px;">';
@@ -286,9 +325,10 @@ async function show_grouped_tasks(frm) {
 
     html += '</div>';
 
-    // Popola il campo HTML "tasks_html"
-    if (frm.fields_dict.tasks_html) {
-        frm.fields_dict.tasks_html.$wrapper.html(html);
+    // Popola il campo HTML corrispondente
+    const field_name = filter_type === 'completed' ? 'completed_tasks_html' : 'tasks_html';
+    if (frm.fields_dict[field_name]) {
+        frm.fields_dict[field_name].$wrapper.html(html);
     }
 }
 
