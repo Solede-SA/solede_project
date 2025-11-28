@@ -29,10 +29,9 @@ def get_columns(filters):
 	columns = [
 		{
 			"label": _("Project"),
-			"fieldname": "project",
-			"fieldtype": "Link",
-			"options": "Project",
-			"width": 180
+			"fieldname": "project_name",
+			"fieldtype": "Data",
+			"width": 250
 		},
 		{
 			"label": _("Customer"),
@@ -134,6 +133,7 @@ def get_project_summary(filters):
 	query = f"""
 		SELECT
 			p.name as project,
+			p.project_name,
 			p.customer,
 			p.status,
 			COALESCE(p.expected_total_hours, 0) as planned_hours,
@@ -143,8 +143,8 @@ def get_project_summary(filters):
 			COUNT(DISTINCT tsd.task) as task_count
 		FROM `tabProject` p
 		LEFT JOIN `tabTimesheet Detail` tsd ON tsd.project = p.name
-			AND tsd.from_time >= %(from_date)s
-			AND tsd.from_time <= %(to_date)s
+			AND DATE(tsd.from_time) >= %(from_date)s
+			AND DATE(tsd.from_time) <= %(to_date)s
 		LEFT JOIN `tabTimesheet` ts ON tsd.parent = ts.name
 			AND ts.docstatus IN (0, 1)
 		WHERE 1=1
@@ -173,8 +173,9 @@ def get_task_breakdown(project, filters):
 
 	query = f"""
 		SELECT
-			t.name as project,
-			t.subject as customer,
+			t.name as task,
+			t.subject as project_name,
+			NULL as customer,
 			t.status as status,
 			COALESCE(t.expected_hours, 0) as planned_hours,
 			COALESCE(SUM(tsd.hours), 0) as actual_hours,
@@ -183,8 +184,8 @@ def get_task_breakdown(project, filters):
 			t.parent_task
 		FROM `tabTask` t
 		LEFT JOIN `tabTimesheet Detail` tsd ON tsd.task = t.name
-			AND tsd.from_time >= %(from_date)s
-			AND tsd.from_time <= %(to_date)s
+			AND DATE(tsd.from_time) >= %(from_date)s
+			AND DATE(tsd.from_time) <= %(to_date)s
 		LEFT JOIN `tabTimesheet` ts ON tsd.parent = ts.name
 			AND ts.docstatus IN (0, 1)
 		WHERE t.project = %(project)s
@@ -206,10 +207,6 @@ def get_task_breakdown(project, filters):
 			row.percent_complete = (row.actual_hours / row.planned_hours) * 100
 		else:
 			row.percent_complete = 0 if row.actual_hours == 0 else 100
-
-		# Show parent task in customer column for visual grouping
-		if row.parent_task:
-			row.customer = f"[{row.parent_task}] {row.customer}"
 
 		# Task count is always 1 for task rows
 		row.task_count = 1
@@ -309,7 +306,7 @@ def get_completion_chart(project_rows):
 	if len(project_rows) > 10:
 		project_rows = sorted(project_rows, key=lambda x: x.get("actual_hours", 0), reverse=True)[:10]
 
-	labels = [row.get("project") for row in project_rows]
+	labels = [row.get("project_name") for row in project_rows]
 	percent_values = [row.get("percent_complete", 0) for row in project_rows]
 
 	return {
@@ -333,7 +330,7 @@ def get_planned_vs_actual_chart(project_rows):
 	if len(project_rows) > 10:
 		project_rows = sorted(project_rows, key=lambda x: x.get("actual_hours", 0), reverse=True)[:10]
 
-	labels = [row.get("project") for row in project_rows]
+	labels = [row.get("project_name") for row in project_rows]
 	planned_values = [row.get("planned_hours", 0) for row in project_rows]
 	actual_values = [row.get("actual_hours", 0) for row in project_rows]
 
@@ -362,7 +359,7 @@ def get_hours_distribution_chart(project_rows):
 	if len(project_rows) > 10:
 		project_rows = sorted(project_rows, key=lambda x: x.get("actual_hours", 0), reverse=True)[:10]
 
-	labels = [row.get("project") for row in project_rows]
+	labels = [row.get("project_name") for row in project_rows]
 	values = [row.get("actual_hours", 0) for row in project_rows]
 
 	# Filter out projects with 0 hours
@@ -395,6 +392,7 @@ def get_employee_breakdown_chart(filters):
 	query = f"""
 		SELECT
 			p.name as project,
+			p.project_name,
 			e.employee_name,
 			SUM(tsd.hours) as hours
 		FROM `tabTimesheet Detail` tsd
@@ -403,8 +401,8 @@ def get_employee_breakdown_chart(filters):
 		LEFT JOIN `tabProject` p ON tsd.project = p.name
 		WHERE
 			ts.docstatus IN (0, 1)
-			AND tsd.from_time >= %(from_date)s
-			AND tsd.from_time <= %(to_date)s
+			AND DATE(tsd.from_time) >= %(from_date)s
+			AND DATE(tsd.from_time) <= %(to_date)s
 			{conditions}
 		GROUP BY p.name, e.employee_name
 		ORDER BY p.name, hours DESC
@@ -418,9 +416,11 @@ def get_employee_breakdown_chart(filters):
 
 	# Group by project
 	projects = {}
+	project_names = {}
 	for row in data:
 		if row.project not in projects:
 			projects[row.project] = {}
+			project_names[row.project] = row.project_name
 		projects[row.project][row.employee_name] = row.hours
 
 	# Get unique employees
@@ -438,9 +438,10 @@ def get_employee_breakdown_chart(filters):
 
 	datasets = []
 	colors = ["#2196F3", "#4CAF50", "#FF9800", "#9C27B0", "#F44336"]
+	project_keys = list(projects.keys())[:10]
 	for i, (employee, _) in enumerate(top_employees):
 		dataset_values = []
-		for project in list(projects.keys())[:10]:
+		for project in project_keys:
 			dataset_values.append(projects[project].get(employee, 0))
 
 		datasets.append({
@@ -448,9 +449,12 @@ def get_employee_breakdown_chart(filters):
 			"values": dataset_values
 		})
 
+	# Use project names for labels
+	labels = [project_names.get(p, p) for p in project_keys]
+
 	return {
 		"data": {
-			"labels": list(projects.keys())[:10],
+			"labels": labels,
 			"datasets": datasets
 		},
 		"type": "bar",

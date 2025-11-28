@@ -2,6 +2,22 @@
 // For license information, please see license.txt
 
 frappe.query_reports["Project Time Analysis"] = {
+	"formatter": function(value, row, column, data, default_formatter) {
+		value = default_formatter(value, row, column, data);
+
+		if (column.fieldname === "project_name" && data) {
+			// For task rows (indented), link to Task
+			if (data.indent && data.task) {
+				value = `<a href="/app/task/${data.task}">${data.project_name || data.task}</a>`;
+			}
+			// For project rows, link to Project
+			else if (data.project) {
+				value = `<a href="/app/project/${data.project}">${data.project_name || data.project}</a>`;
+			}
+		}
+
+		return value;
+	},
 	"filters": [
 		{
 			"fieldname": "from_date",

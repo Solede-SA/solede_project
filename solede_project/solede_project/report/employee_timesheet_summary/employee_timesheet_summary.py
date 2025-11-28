@@ -130,8 +130,8 @@ def get_data(filters):
 		LEFT JOIN `tabProject` p ON tsd.project = p.name
 		WHERE
 			ts.docstatus IN (0, 1)
-			AND tsd.from_time >= %(from_date)s
-			AND tsd.from_time <= %(to_date)s
+			AND DATE(tsd.from_time) >= %(from_date)s
+			AND DATE(tsd.from_time) <= %(to_date)s
 			{conditions}
 		{group_by_clause}
 		ORDER BY {get_order_by_clause(filters)}
