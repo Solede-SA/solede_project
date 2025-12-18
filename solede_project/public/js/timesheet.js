@@ -16,6 +16,27 @@ frappe.ui.form.on('Timesheet', {
 });
 
 frappe.ui.form.on('Timesheet Detail', {
+    time_logs_add: function(frm, cdt, cdn) {
+        // Auto-compila task, project e activity_type quando si aggiunge una riga manualmente
+        if (frm.doc.task) {
+            frappe.call({
+                method: 'frappe.client.get',
+                args: {
+                    doctype: 'Task',
+                    name: frm.doc.task
+                },
+                callback: function(r) {
+                    if (r.message) {
+                        let row = locals[cdt][cdn];
+                        row.task = r.message.name;
+                        row.project = r.message.project;
+                        row.activity_type = r.message.activity_type;
+                        frm.refresh_field('time_logs');
+                    }
+                }
+            });
+        }
+    },
     before_time_logs_remove: function(frm, cdt, cdn) {
         // Impedisci la rimozione di time_logs se associato a Task
         if (frm.doc.task) {
