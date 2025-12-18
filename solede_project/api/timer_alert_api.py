@@ -30,8 +30,8 @@ def check_long_running_timers():
         max_hours = settings.max_timer_hours or 8.0
         company = settings.company
 
-        # Trova tutti i timer attivi che superano le ore massime per questa company
-        long_timers = frappe.db.sql("""
+        # Trova tutti i timer attivi per questa company
+        active_timers = frappe.db.sql("""
             SELECT
                 t.name as task_name,
                 t.subject as task_subject,
@@ -55,8 +55,19 @@ def check_long_running_timers():
                 AND t.timer_started_at IS NOT NULL
                 AND ts.docstatus = 0
                 AND c.name = %(company)s
-                AND TIMESTAMPDIFF(SECOND, t.timer_started_at, NOW()) / 3600.0 >= %(max_hours)s
-        """, {"max_hours": max_hours, "company": company}, as_dict=True)
+        """, {"company": company}, as_dict=True)
+
+        if not active_timers:
+            continue
+
+        # Filtra timer che superano le ore massime (in Python per gestire timezone)
+        long_timers = []
+        for timer in active_timers:
+            started = get_datetime(timer.timer_started_at)
+            elapsed_hours = time_diff_in_hours(now_datetime(), started)
+            if elapsed_hours >= max_hours:
+                timer.elapsed_hours = elapsed_hours
+                long_timers.append(timer)
 
         if not long_timers:
             continue
@@ -67,12 +78,6 @@ def check_long_running_timers():
             user_id = timer.user_id
             if user_id not in timers_by_user:
                 timers_by_user[user_id] = []
-
-            # Calcola ore trascorse
-            started = get_datetime(timer.timer_started_at)
-            elapsed_hours = time_diff_in_hours(now_datetime(), started)
-            timer.elapsed_hours = elapsed_hours
-
             timers_by_user[user_id].append(timer)
 
         # Invia email a ciascun utente
