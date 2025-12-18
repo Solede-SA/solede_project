@@ -84,6 +84,48 @@ def sync_timer_with_task(doc, method=None):
             }, update_modified=False)
 
 
+def update_task_totals(doc, method=None):
+    """
+    Hook: on_update
+    Aggiorna actual_hours dei Task quando si modificano le ore nel Timesheet
+    """
+    if doc.docstatus > 1:  # Ignora cancellati
+        return
+
+    # Trova tutti i task referenziati nei time_logs
+    tasks = set()
+    for detail in doc.time_logs:
+        if detail.task:
+            tasks.add(detail.task)
+
+    # Aggiorna ogni task
+    for task_name in tasks:
+        # Calcola somma ore per questo task
+        result = frappe.db.sql("""
+            SELECT SUM(hours) as total
+            FROM `tabTimesheet Detail`
+            WHERE task = %s
+            AND docstatus IN (0, 1)
+        """, task_name, as_dict=True)
+
+        actual_hours = result[0].total if result and result[0].total else 0
+
+        # Recupera expected_hours per calcolare variance e progress
+        task = frappe.get_doc("Task", task_name)
+        expected = task.expected_hours or 0
+        variance = actual_hours - expected
+        progress = 0
+        if expected > 0:
+            progress = round(min((actual_hours / expected) * 100, 100), 2)
+
+        # Aggiorna senza triggare eventi
+        frappe.db.set_value("Task", task_name, {
+            "actual_hours": actual_hours,
+            "hours_variance": variance,
+            "progress": progress
+        }, update_modified=False)
+
+
 def update_project_costing(doc, method=None):
     """
     Hook: on_update / after_insert

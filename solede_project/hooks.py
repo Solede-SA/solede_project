@@ -166,11 +166,13 @@ doc_events = {
         "validate": "solede_project.api.timesheet_hooks.validate_task_relationship",
         "after_insert": [
             "solede_project.api.timesheet_hooks.sync_task_link",
+            "solede_project.api.timesheet_hooks.update_task_totals",
             "solede_project.api.timesheet_hooks.update_project_costing"
         ],
         "on_update": [
             "solede_project.api.timesheet_hooks.sync_task_link",
             "solede_project.api.timesheet_hooks.sync_timer_with_task",
+            "solede_project.api.timesheet_hooks.update_task_totals",
             "solede_project.api.timesheet_hooks.update_project_costing"
         ],
         "on_submit": "solede_project.api.timesheet_hooks.update_task_actual_hours",
