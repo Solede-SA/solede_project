@@ -55,7 +55,7 @@ def check_long_running_timers():
                 AND t.timer_started_at IS NOT NULL
                 AND ts.docstatus = 0
                 AND c.name = %(company)s
-                AND TIMESTAMPDIFF(HOUR, t.timer_started_at, NOW()) >= %(max_hours)s
+                AND TIMESTAMPDIFF(SECOND, t.timer_started_at, NOW()) / 3600.0 >= %(max_hours)s
         """, {"max_hours": max_hours, "company": company}, as_dict=True)
 
         if not long_timers:
