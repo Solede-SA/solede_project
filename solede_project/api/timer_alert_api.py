@@ -82,12 +82,8 @@ def check_long_running_timers():
 
         # Invia email a ciascun utente
         for user_id, timers in timers_by_user.items():
-            frappe.log_error(f"Checking alert for user {user_id}, {len(timers)} timers, frequency={settings.alert_frequency}", "Timer Alert Debug")
             # Controlla se abbiamo già inviato un alert recentemente
-            should_send = should_send_alert(user_id, timers, settings.alert_frequency)
-            frappe.log_error(f"should_send_alert returned {should_send}", "Timer Alert Debug")
-            if should_send:
-                frappe.log_error(f"Calling send_timer_alert_email for {user_id}", "Timer Alert Debug")
+            if should_send_alert(user_id, timers, settings.alert_frequency):
                 send_timer_alert_email(user_id, timers, settings)
 
         total_timers += len(long_timers)
