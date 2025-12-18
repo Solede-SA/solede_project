@@ -19,11 +19,7 @@ def check_long_running_timers():
     )
 
     if not all_settings:
-        frappe.logger().info("No active Project Settings found with timer alerts enabled")
         return
-
-    total_timers = 0
-    total_users = 0
 
     # Per ogni company con alert attivo
     for settings in all_settings:
@@ -86,13 +82,6 @@ def check_long_running_timers():
             if should_send_alert(user_id, timers, settings.alert_frequency):
                 send_timer_alert_email(user_id, timers, settings)
 
-        total_timers += len(long_timers)
-        total_users += len(timers_by_user)
-
-        frappe.logger().info(f"Company {company}: Processed {len(long_timers)} long running timers for {len(timers_by_user)} users")
-
-    frappe.logger().info(f"Total: Processed {total_timers} long running timers for {total_users} users across {len(all_settings)} companies")
-
 
 def should_send_alert(user_id, timers, frequency):
     """
@@ -134,62 +123,58 @@ def send_timer_alert_email(user_id, timers, settings):
     """
     Invia email di alert all'utente
     """
-    try:
-        # Prepara i dati per il template
-        context = {
-            "user": frappe.get_doc("User", user_id),
-            "timers": timers,
-            "company": timers[0].company if timers else None
-        }
+    # Prepara i dati per il template
+    context = {
+        "user": frappe.get_doc("User", user_id),
+        "timers": timers,
+        "company": timers[0].company if timers else None
+    }
 
-        # Se c'è un template configurato, usalo
-        if settings.email_template:
-            frappe.sendmail(
-                recipients=[user_id],
-                template=settings.email_template,
-                args=context,
-                subject=_("Long Running Timer Alert")
-            )
-        else:
-            # Usa template di default
-            subject = _("Timer Alert: You have {0} timer(s) running for a long time").format(len(timers))
+    # Se c'è un template configurato, usalo
+    if settings.email_template:
+        email_template = frappe.get_doc("Email Template", settings.email_template)
+        subject = frappe.render_template(email_template.subject, context)
+        message = frappe.render_template(email_template.response_html or email_template.response, context)
+        frappe.sendmail(
+            recipients=[user_id],
+            subject=subject,
+            message=message
+        )
+    else:
+        # Usa template di default
+        subject = _("Timer Alert: You have {0} timer(s) running for a long time").format(len(timers))
 
-            message = "<h3>Long Running Timer Alert</h3>"
-            message += "<p>The following timer(s) have been running for a long time:</p>"
-            message += "<ul>"
+        message = "<h3>Long Running Timer Alert</h3>"
+        message += "<p>The following timer(s) have been running for a long time:</p>"
+        message += "<ul>"
 
-            for timer in timers:
-                message += f"<li>"
-                message += f"<strong>{timer.task_name}</strong>: {timer.task_subject}<br>"
-                message += f"Project: {timer.project_name or timer.project}<br>"
-                if timer.customer:
-                    message += f"Customer: {timer.customer}<br>"
-                message += f"Running for: <strong>{timer.elapsed_hours:.1f} hours</strong><br>"
-                message += f'<a href="{frappe.utils.get_url()}/app/task/{timer.task_name}">Stop Timer</a>'
-                message += f"</li><br>"
+        for timer in timers:
+            message += f"<li>"
+            message += f"<strong>{timer.task_name}</strong>: {timer.task_subject}<br>"
+            message += f"Project: {timer.project_name or timer.project}<br>"
+            if timer.customer:
+                message += f"Customer: {timer.customer}<br>"
+            message += f"Running for: <strong>{timer.elapsed_hours:.1f} hours</strong><br>"
+            message += f'<a href="{frappe.utils.get_url()}/app/task/{timer.task_name}">Stop Timer</a>'
+            message += f"</li><br>"
 
-            message += "</ul>"
-            message += "<p>Please stop the timer(s) if you've finished working on these tasks.</p>"
+        message += "</ul>"
+        message += "<p>Please stop the timer(s) if you've finished working on these tasks.</p>"
 
-            frappe.sendmail(
-                recipients=[user_id],
-                subject=subject,
-                message=message
-            )
+        frappe.sendmail(
+            recipients=[user_id],
+            subject=subject,
+            message=message
+        )
 
-        # Salva timestamp dell'alert
-        if settings.alert_frequency == "Once":
-            for timer in timers:
-                key = f"timer_alert_{timer.task_name}"
-                frappe.cache().set(key, "1", expires_in_sec=86400)  # 24 ore
-        else:
-            key = f"timer_alert_last_{user_id}"
-            frappe.cache().set(key, str(now_datetime()), expires_in_sec=86400)
-
-        frappe.logger().info(f"Sent timer alert email to {user_id} for {len(timers)} timer(s)")
-
-    except Exception as e:
-        frappe.logger().error(f"Failed to send timer alert email to {user_id}: {str(e)}")
+    # Salva timestamp dell'alert
+    if settings.alert_frequency == "Once":
+        for timer in timers:
+            key = f"timer_alert_{timer.task_name}"
+            frappe.cache().set(key, "1", ex=86400)  # 24 ore
+    else:
+        key = f"timer_alert_last_{user_id}"
+        frappe.cache().set(key, str(now_datetime()), ex=86400)
 
 
 @frappe.whitelist()
