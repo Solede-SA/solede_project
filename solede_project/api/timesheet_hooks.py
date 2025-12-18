@@ -70,12 +70,11 @@ def sync_timer_with_task(doc, method=None):
     task = frappe.get_doc("Task", doc.task)
 
     if active_timer:
-        # Timer attivo nel Timesheet -> assicurati che anche Task sia in timer_running
-        if not task.timer_running:
-            task.db_set({
-                "timer_running": 1,
-                "timer_started_at": active_timer.from_time
-            }, update_modified=False)
+        # Timer attivo nel Timesheet -> assicurati che Task sia sincronizzato
+        task.db_set({
+            "timer_running": 1,
+            "timer_started_at": active_timer.from_time
+        }, update_modified=False)
     else:
         # Nessun timer attivo nel Timesheet -> assicurati che Task sia fermato
         if task.timer_running:
