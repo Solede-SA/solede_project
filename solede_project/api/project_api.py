@@ -7,6 +7,58 @@ from frappe.utils import flt, getdate
 
 
 @frappe.whitelist()
+def get_project_procurement(project_name):
+    """Restituisce PO e MR items raggruppati per parent, collegati al progetto."""
+    # Verifica permesso sul Project
+    frappe.has_permission("Project", doc=project_name, throw=True)
+
+    po_items = frappe.db.sql("""
+        SELECT poi.parent, poi.item_code, poi.item_name, poi.qty, poi.uom,
+               poi.rate, poi.amount, poi.received_qty, poi.schedule_date
+        FROM `tabPurchase Order Item` poi
+        JOIN `tabPurchase Order` po ON po.name = poi.parent
+        WHERE poi.project = %s AND po.docstatus < 2
+        ORDER BY poi.parent, poi.idx
+    """, project_name, as_dict=True)
+
+    mr_items = frappe.db.sql("""
+        SELECT mri.parent, mri.item_code, mri.item_name, mri.qty, mri.uom,
+               mri.rate, mri.amount, mri.ordered_qty, mri.schedule_date
+        FROM `tabMaterial Request Item` mri
+        JOIN `tabMaterial Request` mr ON mr.name = mri.parent
+        WHERE mri.project = %s AND mr.docstatus < 2
+        ORDER BY mri.parent, mri.idx
+    """, project_name, as_dict=True)
+
+    po_names = list({i.parent for i in po_items})
+    mr_names = list({i.parent for i in mr_items})
+
+    purchase_orders = {}
+    if po_names:
+        for po in frappe.db.sql("""
+            SELECT name, supplier_name, transaction_date, status,
+                   grand_total, per_received, per_billed
+            FROM `tabPurchase Order` WHERE name IN %s
+        """, [po_names], as_dict=True):
+            purchase_orders[po.name] = po
+
+    material_requests = {}
+    if mr_names:
+        for mr in frappe.db.sql("""
+            SELECT name, transaction_date, status, material_request_type
+            FROM `tabMaterial Request` WHERE name IN %s
+        """, [mr_names], as_dict=True):
+            material_requests[mr.name] = mr
+
+    return {
+        "po_items": po_items,
+        "mr_items": mr_items,
+        "purchase_orders": purchase_orders,
+        "material_requests": material_requests
+    }
+
+
+@frappe.whitelist()
 def create_sales_invoice_from_timesheet(project_name, from_date, to_date):
     """
     API Method

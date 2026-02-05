@@ -2,11 +2,33 @@
 // Client Script for Project
 
 frappe.ui.form.on('Project', {
+    setup: function(frm) {
+        // Filtro per project_manager: mostra solo utenti con ruolo Projects Manager o Projects Supervisor
+        frm.set_query('project_manager', function() {
+            return {
+                query: 'solede_project.api.project_permission.get_project_manager_users'
+            };
+        });
+    },
+
     refresh: function(frm) {
         // Mostra i tasks attivi e conclusi
         if (frm.doc.name) {
             show_grouped_tasks(frm, 'active');
             show_grouped_tasks(frm, 'completed');
+            show_procurement(frm);
+        }
+
+        // Verifica ruoli utente per mostrare/nascondere funzionalità
+        const user_roles = frappe.user_roles || [];
+        const is_supervisor = user_roles.includes('Projects Supervisor') || user_roles.includes('System Manager');
+        const is_pm = user_roles.includes('Projects Manager');
+
+        // Campo project_manager: solo Supervisor può modificarlo su progetti esistenti
+        if (frm.doc.name && !frm.doc.__islocal) {
+            if (!is_supervisor) {
+                frm.set_df_property('project_manager', 'read_only', 1);
+            }
         }
 
         // Button: Add Task
@@ -869,4 +891,162 @@ async function show_add_task_dialog(frm) {
     });
 
     dialog.show();
+}
+
+async function show_procurement(frm) {
+    if (!frm.fields_dict.procurement_html) return;
+
+    const resp = await frappe.call({
+        method: 'solede_project.api.project_api.get_project_procurement',
+        args: { project_name: frm.doc.name }
+    });
+
+    const data = resp.message || {};
+    const po_items = data.po_items || [];
+    const mr_items = data.mr_items || [];
+    const po_map = data.purchase_orders || {};
+    const mr_map = data.material_requests || {};
+
+    // Get unique parent names (preserving order)
+    const po_names = [...new Set(po_items.map(i => i.parent))];
+    const mr_names = [...new Set(mr_items.map(i => i.parent))];
+
+    // Group items by parent
+    const po_grouped = {};
+    po_items.forEach(item => {
+        if (!po_grouped[item.parent]) po_grouped[item.parent] = [];
+        po_grouped[item.parent].push(item);
+    });
+    const mr_grouped = {};
+    mr_items.forEach(item => {
+        if (!mr_grouped[item.parent]) mr_grouped[item.parent] = [];
+        mr_grouped[item.parent].push(item);
+    });
+
+    // Status colors
+    const status_colors = {
+        'Draft': '#6c757d',
+        'To Receive and Bill': '#2490ef',
+        'To Bill': '#ffc107',
+        'To Receive': '#17a2b8',
+        'Completed': '#28a745',
+        'Cancelled': '#dc3545',
+        'Closed': '#6c757d',
+        'On Hold': '#ffc107',
+        'Partially Ordered': '#17a2b8',
+        'Ordered': '#2490ef',
+        'Pending': '#ffc107',
+        'Partially Received': '#17a2b8',
+        'Received': '#28a745',
+        'Transferred': '#28a745',
+        'Material Transferred': '#28a745',
+        'Material Issued': '#28a745'
+    };
+
+    let html = '<div style="margin-top: 15px;">';
+
+    // ---- Purchase Orders section ----
+    html += '<h4 style="margin-bottom: 15px; color: #36414c;"><i class="fa fa-shopping-cart" style="margin-right: 8px;"></i>Purchase Orders</h4>';
+
+    if (po_names.length === 0) {
+        html += '<div style="padding: 20px; text-align: center; color: #6c757d; font-style: italic; border: 1px solid #d1d8dd; border-radius: 6px; background: #f7f9fb; margin-bottom: 25px;">Nessun ordine di acquisto collegato</div>';
+    } else {
+        po_names.forEach(po_name => {
+            const po = po_map[po_name] || {};
+            const items = po_grouped[po_name] || [];
+            const s_color = status_colors[po.status] || '#6c757d';
+
+            html += '<div style="margin-bottom: 20px; border: 1px solid #d1d8dd; border-radius: 6px; padding: 15px; background-color: #f7f9fb; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">';
+
+            // Header
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px solid #e0e6eb; flex-wrap: wrap; gap: 8px;">';
+            html += '<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">';
+            html += `<a href="/app/purchase-order/${po_name}" style="color: #36414c; text-decoration: none; font-weight: 600; font-size: 15px;">${po_name}</a>`;
+            html += `<span style="background: ${s_color}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 500;">${po.status || ''}</span>`;
+            html += '</div>';
+            html += '<div style="display: flex; align-items: center; gap: 15px; font-size: 13px; color: #6c757d; flex-wrap: wrap;">';
+            if (po.supplier_name) html += `<span><i class="fa fa-building" style="margin-right: 4px;"></i>${po.supplier_name}</span>`;
+            if (po.transaction_date) html += `<span><i class="fa fa-calendar" style="margin-right: 4px;"></i>${frappe.datetime.str_to_user(po.transaction_date)}</span>`;
+            html += `<span style="font-weight: 600; color: #36414c;">${format_currency(po.grand_total || 0)}</span>`;
+            html += `<span>Rcv: ${flt(po.per_received || 0, 1)}%</span>`;
+            html += `<span>Bill: ${flt(po.per_billed || 0, 1)}%</span>`;
+            html += '</div>';
+            html += '</div>';
+
+            // Items table
+            html += '<div style="background: white; border-radius: 4px; overflow-x: auto;">';
+            html += '<table style="width: 100%; border-collapse: collapse; font-size: 13px;">';
+            html += '<thead><tr style="background: #f0f4f7; color: #6c757d; font-size: 11px; text-transform: uppercase;">';
+            html += '<th style="padding: 8px 10px; text-align: left;">Item</th>';
+            html += '<th style="padding: 8px 10px; text-align: right;">Qty</th>';
+            html += '<th style="padding: 8px 10px; text-align: left;">UOM</th>';
+            html += '<th style="padding: 8px 10px; text-align: right;">Rate</th>';
+            html += '<th style="padding: 8px 10px; text-align: right;">Amount</th>';
+            html += '<th style="padding: 8px 10px; text-align: right;">Received</th>';
+            html += '</tr></thead><tbody>';
+            items.forEach(item => {
+                html += '<tr style="border-bottom: 1px solid #f0f4f7;">';
+                html += `<td style="padding: 8px 10px;">${item.item_name || item.item_code}</td>`;
+                html += `<td style="padding: 8px 10px; text-align: right;">${flt(item.qty, 2)}</td>`;
+                html += `<td style="padding: 8px 10px;">${item.uom || ''}</td>`;
+                html += `<td style="padding: 8px 10px; text-align: right;">${format_currency(item.rate || 0)}</td>`;
+                html += `<td style="padding: 8px 10px; text-align: right;">${format_currency(item.amount || 0)}</td>`;
+                html += `<td style="padding: 8px 10px; text-align: right;">${flt(item.received_qty || 0, 2)}</td>`;
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            html += '</div>';
+        });
+    }
+
+    // ---- Material Requests section ----
+    html += '<h4 style="margin-bottom: 15px; margin-top: 25px; color: #36414c;"><i class="fa fa-clipboard" style="margin-right: 8px;"></i>Material Requests</h4>';
+
+    if (mr_names.length === 0) {
+        html += '<div style="padding: 20px; text-align: center; color: #6c757d; font-style: italic; border: 1px solid #d1d8dd; border-radius: 6px; background: #f7f9fb;">Nessuna richiesta materiale collegata</div>';
+    } else {
+        mr_names.forEach(mr_name => {
+            const mr = mr_map[mr_name] || {};
+            const items = mr_grouped[mr_name] || [];
+            const s_color = status_colors[mr.status] || '#6c757d';
+
+            html += '<div style="margin-bottom: 20px; border: 1px solid #d1d8dd; border-radius: 6px; padding: 15px; background-color: #f7f9fb; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">';
+
+            // Header
+            html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px solid #e0e6eb; flex-wrap: wrap; gap: 8px;">';
+            html += '<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">';
+            html += `<a href="/app/material-request/${mr_name}" style="color: #36414c; text-decoration: none; font-weight: 600; font-size: 15px;">${mr_name}</a>`;
+            html += `<span style="background: ${s_color}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 500;">${mr.status || ''}</span>`;
+            if (mr.material_request_type) html += `<span style="background: #e9ecef; color: #495057; padding: 3px 10px; border-radius: 12px; font-size: 11px;">${mr.material_request_type}</span>`;
+            html += '</div>';
+            html += '<div style="font-size: 13px; color: #6c757d;">';
+            if (mr.transaction_date) html += `<span><i class="fa fa-calendar" style="margin-right: 4px;"></i>${frappe.datetime.str_to_user(mr.transaction_date)}</span>`;
+            html += '</div>';
+            html += '</div>';
+
+            // Items table
+            html += '<div style="background: white; border-radius: 4px; overflow-x: auto;">';
+            html += '<table style="width: 100%; border-collapse: collapse; font-size: 13px;">';
+            html += '<thead><tr style="background: #f0f4f7; color: #6c757d; font-size: 11px; text-transform: uppercase;">';
+            html += '<th style="padding: 8px 10px; text-align: left;">Item</th>';
+            html += '<th style="padding: 8px 10px; text-align: right;">Qty</th>';
+            html += '<th style="padding: 8px 10px; text-align: left;">UOM</th>';
+            html += '<th style="padding: 8px 10px; text-align: right;">Ordered</th>';
+            html += '</tr></thead><tbody>';
+            items.forEach(item => {
+                html += '<tr style="border-bottom: 1px solid #f0f4f7;">';
+                html += `<td style="padding: 8px 10px;">${item.item_name || item.item_code}</td>`;
+                html += `<td style="padding: 8px 10px; text-align: right;">${flt(item.qty, 2)}</td>`;
+                html += `<td style="padding: 8px 10px;">${item.uom || ''}</td>`;
+                html += `<td style="padding: 8px 10px; text-align: right;">${flt(item.ordered_qty || 0, 2)}</td>`;
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            html += '</div>';
+        });
+    }
+
+    html += '</div>';
+
+    frm.fields_dict.procurement_html.$wrapper.html(html);
 }
