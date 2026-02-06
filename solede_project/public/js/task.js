@@ -2,6 +2,22 @@
 // Client Script for Task - Time Tracking
 
 frappe.ui.form.on('Task', {
+    setup: function(frm) {
+        // Filtro per project_phase: mostra solo fasi del progetto selezionato
+        frm.set_query('project_phase', function() {
+            if (!frm.doc.project) {
+                frappe.msgprint(__('Please select a Project first'));
+                return { filters: { name: '' } };
+            }
+            return {
+                query: 'solede_project.api.project_phase_api.get_project_phases',
+                filters: {
+                    parent: frm.doc.project
+                }
+            };
+        });
+    },
+
     refresh: function(frm) {
         // Mostra sezione time tracking solo se il task ha activity_type
         setup_time_tracking_ui(frm);
@@ -12,6 +28,11 @@ frappe.ui.form.on('Task', {
         if (frm.doc.timer_running && frm.doc.timer_started_at) {
             start_timer_counter(frm);
         }
+    },
+
+    project: function(frm) {
+        // Resetta project_phase quando cambia il progetto
+        frm.set_value('project_phase', '');
     }
 });
 

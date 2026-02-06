@@ -17,6 +17,7 @@ frappe.ui.form.on('Project', {
             show_grouped_tasks(frm, 'active');
             show_grouped_tasks(frm, 'completed');
             show_procurement(frm);
+            show_phases_summary(frm);
         }
 
         // Verifica ruoli utente per mostrare/nascondere funzionalità
@@ -1049,4 +1050,112 @@ async function show_procurement(frm) {
     html += '</div>';
 
     frm.fields_dict.procurement_html.$wrapper.html(html);
+}
+
+async function show_phases_summary(frm) {
+    if (!frm.fields_dict.phases_html) return;
+
+    const resp = await frappe.call({
+        method: 'solede_project.api.project_phase_api.get_phase_summary',
+        args: { project_name: frm.doc.name }
+    });
+
+    const phases = resp.message || [];
+
+    if (phases.length === 0) {
+        frm.fields_dict.phases_html.$wrapper.html('<div style="padding: 20px; text-align: center; color: #6c757d; font-style: italic;">No phases defined</div>');
+        return;
+    }
+
+    // Status colors
+    const status_colors = {
+        'Open': '#6c757d',
+        'In Progress': '#2490ef',
+        'Completed': '#28a745'
+    };
+
+    let html = '<div style="margin-top: 15px;">';
+    html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">';
+
+    phases.forEach(phase => {
+        const s_color = status_colors[phase.status] || '#6c757d';
+        const hours_pct = phase.hours_progress || 0;
+        const cost_pct = phase.cost_progress || 0;
+        const hours_bar_color = hours_pct > 100 ? '#dc3545' : hours_pct >= 80 ? '#ffc107' : '#28a745';
+        const cost_bar_color = cost_pct > 100 ? '#dc3545' : cost_pct >= 80 ? '#ffc107' : '#28a745';
+
+        html += '<div style="border: 1px solid #d1d8dd; border-radius: 8px; padding: 20px; background-color: #f7f9fb; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">';
+
+        // Header
+        html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e0e6eb;">';
+        html += `<div style="display: flex; align-items: center; gap: 10px;">`;
+        html += `<span style="font-weight: 600; font-size: 16px; color: #36414c;">${phase.phase_name}</span>`;
+        html += `<span style="background: ${s_color}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 500;">${phase.status}</span>`;
+        html += `</div>`;
+        html += `<span style="color: #6c757d; font-size: 12px;">#${phase.sequence}</span>`;
+        html += '</div>';
+
+        // Dates
+        if (phase.expected_start_date || phase.expected_end_date) {
+            html += '<div style="margin-bottom: 15px; font-size: 12px; color: #6c757d;">';
+            html += '<i class="fa fa-calendar" style="margin-right: 5px;"></i>';
+            if (phase.expected_start_date) html += frappe.datetime.str_to_user(phase.expected_start_date);
+            if (phase.expected_start_date && phase.expected_end_date) html += ' - ';
+            if (phase.expected_end_date) html += frappe.datetime.str_to_user(phase.expected_end_date);
+            html += '</div>';
+        }
+
+        // Hours section
+        html += '<div style="margin-bottom: 15px;">';
+        html += '<div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px;">';
+        html += '<span style="color: #6c757d;"><i class="fa fa-clock-o" style="margin-right: 5px;"></i>Hours</span>';
+        html += `<span style="font-weight: 500;">${flt(phase.actual_hours, 1)} / ${flt(phase.expected_hours, 1)} h</span>`;
+        html += '</div>';
+        html += '<div style="height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden;">';
+        html += `<div style="width: ${Math.min(hours_pct, 100)}%; height: 100%; background: ${hours_bar_color};"></div>`;
+        html += '</div>';
+        html += '</div>';
+
+        // Cost section - Ordered (PO)
+        const ordered_cost = phase.ordered_cost || 0;
+        const invoiced_cost = phase.invoiced_cost || 0;
+        const ordered_pct = phase.expected_cost > 0 ? Math.round((ordered_cost / phase.expected_cost) * 100) : 0;
+        const invoiced_pct = phase.expected_cost > 0 ? Math.round((invoiced_cost / phase.expected_cost) * 100) : 0;
+        const ordered_bar_color = ordered_pct > 100 ? '#dc3545' : ordered_pct >= 80 ? '#ffc107' : '#17a2b8';
+        const invoiced_bar_color = invoiced_pct > 100 ? '#dc3545' : invoiced_pct >= 80 ? '#ffc107' : '#28a745';
+
+        html += '<div style="margin-bottom: 10px;">';
+        html += '<div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px;">';
+        html += '<span style="color: #6c757d;"><i class="fa fa-shopping-cart" style="margin-right: 5px;"></i>Ordered (PO)</span>';
+        html += `<span style="font-weight: 500;">${format_currency(ordered_cost)} / ${format_currency(phase.expected_cost)}</span>`;
+        html += '</div>';
+        html += '<div style="height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden;">';
+        html += `<div style="width: ${Math.min(ordered_pct, 100)}%; height: 100%; background: ${ordered_bar_color};"></div>`;
+        html += '</div>';
+        html += '</div>';
+
+        // Cost section - Invoiced (PI)
+        html += '<div style="margin-bottom: 10px;">';
+        html += '<div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px;">';
+        html += '<span style="color: #6c757d;"><i class="fa fa-file-text-o" style="margin-right: 5px;"></i>Invoiced (PI)</span>';
+        html += `<span style="font-weight: 500;">${format_currency(invoiced_cost)} / ${format_currency(phase.expected_cost)}</span>`;
+        html += '</div>';
+        html += '<div style="height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden;">';
+        html += `<div style="width: ${Math.min(invoiced_pct, 100)}%; height: 100%; background: ${invoiced_bar_color};"></div>`;
+        html += '</div>';
+        html += '</div>';
+
+        // Quick links
+        html += '<div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #e0e6eb; font-size: 12px;">';
+        html += `<a href="/app/task?project=${encodeURIComponent(frm.doc.name)}&project_phase=${encodeURIComponent(phase.name)}" style="color: #2490ef; text-decoration: none; margin-right: 15px;"><i class="fa fa-tasks" style="margin-right: 4px;"></i>Tasks</a>`;
+        html += `<a href="/app/purchase-order?custom_project_phase=${encodeURIComponent(phase.name)}" style="color: #2490ef; text-decoration: none;"><i class="fa fa-shopping-cart" style="margin-right: 4px;"></i>PO</a>`;
+        html += '</div>';
+
+        html += '</div>';
+    });
+
+    html += '</div>';
+    html += '</div>';
+
+    frm.fields_dict.phases_html.$wrapper.html(html);
 }

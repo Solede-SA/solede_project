@@ -2,6 +2,22 @@
 // Client Script for Timesheet - Timer personalizzato per Task
 
 frappe.ui.form.on('Timesheet', {
+    setup: function(frm) {
+        // Filtro per project_phase nei time_logs: mostra solo fasi del progetto selezionato
+        frm.set_query('project_phase', 'time_logs', function(doc, cdt, cdn) {
+            let row = locals[cdt][cdn];
+            if (!row.project) {
+                return { filters: { name: '' } };
+            }
+            return {
+                query: 'solede_project.api.project_phase_api.get_project_phases',
+                filters: {
+                    parent: row.project
+                }
+            };
+        });
+    },
+
     refresh: function(frm) {
         if (frm.doc.task) {
             // Timesheet associato a Task - mostra messaggio informativo
@@ -31,6 +47,10 @@ frappe.ui.form.on('Timesheet Detail', {
                         row.task = r.message.name;
                         row.project = r.message.project;
                         row.activity_type = r.message.activity_type;
+                        // Imposta anche project_phase se il task ce l'ha
+                        if (r.message.project_phase) {
+                            row.project_phase = r.message.project_phase;
+                        }
                         frm.refresh_field('time_logs');
                     }
                 }
@@ -46,6 +66,10 @@ frappe.ui.form.on('Timesheet Detail', {
                 frappe.validated = false;
             }
         }
+    },
+    project: function(frm, cdt, cdn) {
+        // Resetta project_phase quando cambia il progetto
+        frappe.model.set_value(cdt, cdn, 'project_phase', '');
     }
 });
 

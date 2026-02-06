@@ -4,6 +4,30 @@
 import frappe
 
 
+def create_default_phases(doc, method=None):
+    """
+    Hook: after_insert
+    Crea le fasi di default "Offerta" e "Esecuzione" per un nuovo progetto
+    """
+    if not doc.name:
+        return
+
+    # Verifica se il progetto ha già delle fasi (es. creato da template)
+    if doc.get("project_phases") and len(doc.project_phases) > 0:
+        return
+
+    # Crea le fasi di default
+    default_phases = [
+        {"phase_name": "Offerta", "sequence": 1, "status": "Open"},
+        {"phase_name": "Esecuzione", "sequence": 2, "status": "Open"}
+    ]
+
+    for phase_data in default_phases:
+        doc.append("project_phases", phase_data)
+
+    doc.save(ignore_permissions=True)
+
+
 def sync_tasks_hours(doc, method=None):
     """
     Hook: on_update

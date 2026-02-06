@@ -47,7 +47,12 @@ doctype_js = {
     "Quotation": "public/js/quotation.js",
     "Project": "public/js/project.js",
     "Task": "public/js/task.js",
-    "Timesheet": "public/js/timesheet.js"
+    "Timesheet": "public/js/timesheet.js",
+    "Purchase Order": "public/js/purchase_order.js",
+    "Purchase Invoice": "public/js/purchase_invoice.js",
+    "Material Request": "public/js/material_request.js",
+    "Request for Quotation": "public/js/request_for_quotation.js",
+    "Supplier Quotation": "public/js/supplier_quotation.js"
 }
 doctype_list_js = {
     "Timesheet": "public/js/timesheet_list.js"
@@ -90,7 +95,8 @@ doctype_list_js = {
 # ------------
 
 # before_install = "solede_project.install.before_install"
-# after_install = "solede_project.install.after_install"
+after_install = "solede_project.setup.after_install"
+after_migrate = "solede_project.setup.after_migrate"
 
 # Uninstallation
 # ------------
@@ -124,13 +130,17 @@ doctype_list_js = {
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+    "Project": "solede_project.api.project_permission.get_permission_query_conditions",
+    "Task": "solede_project.api.project_permission.get_task_permission_query_conditions",
+    "Timesheet": "solede_project.api.project_permission.get_timesheet_permission_query_conditions",
+}
+
+has_permission = {
+    "Project": "solede_project.api.project_permission.has_permission",
+    "Task": "solede_project.api.project_permission.has_task_permission",
+    "Timesheet": "solede_project.api.project_permission.has_timesheet_permission",
+}
 
 # DocType Class
 # ---------------
@@ -150,17 +160,36 @@ doc_events = {
         "on_update": "solede_project.api.quotation_hooks.update_service_groups"
     },
     "Project": {
-        "on_update": "solede_project.api.project_hooks.sync_tasks_hours"
+        "validate": "solede_project.api.project_permission.cleanup_old_project_manager_permission",
+        "on_update": [
+            "solede_project.api.project_hooks.sync_tasks_hours",
+            "solede_project.api.project_permission.sync_project_user_permission"
+        ],
+        "after_insert": [
+            "solede_project.api.project_permission.sync_project_user_permission",
+            "solede_project.api.project_hooks.create_default_phases"
+        ]
     },
     "Task": {
         "on_update": [
             "solede_project.api.task_hooks.calculate_actual_hours_from_timesheet",
             "solede_project.api.task_hooks.handle_task_completion",
-            "solede_project.api.task_hooks.reopen_parent_task_if_needed"
+            "solede_project.api.task_hooks.reopen_parent_task_if_needed",
+            "solede_project.api.task_hooks.update_phase_totals"
         ],
         "after_insert": [
             "solede_project.api.task_hooks.reopen_parent_task_if_needed"
         ]
+    },
+    "Purchase Order": {
+        "on_update": "solede_project.api.purchase_hooks.update_phase_totals_from_po",
+        "on_submit": "solede_project.api.purchase_hooks.update_phase_totals_from_po",
+        "on_cancel": "solede_project.api.purchase_hooks.update_phase_totals_from_po"
+    },
+    "Purchase Invoice": {
+        "on_update": "solede_project.api.purchase_hooks.update_phase_totals_from_purchase_doc",
+        "on_submit": "solede_project.api.purchase_hooks.update_phase_totals_from_purchase_doc",
+        "on_cancel": "solede_project.api.purchase_hooks.update_phase_totals_from_purchase_doc"
     },
     "Timesheet": {
         "validate": "solede_project.api.timesheet_hooks.validate_task_relationship",
@@ -290,6 +319,12 @@ fixtures = [
                     "Solede Project",
                 ],
             ],
+        ],
+    },
+    {
+        "dt": "Role",
+        "filters": [
+            ["name", "=", "Projects Supervisor"],
         ],
     },
 ]

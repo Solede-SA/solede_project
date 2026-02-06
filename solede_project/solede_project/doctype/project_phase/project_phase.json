@@ -1,0 +1,137 @@
+{
+ "actions": [],
+ "creation": "2026-02-05 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "phase_name",
+  "sequence",
+  "status",
+  "column_break_dates",
+  "expected_start_date",
+  "expected_end_date",
+  "actual_start_date",
+  "actual_end_date",
+  "section_break_hours",
+  "expected_hours",
+  "actual_hours",
+  "column_break_cost",
+  "expected_cost",
+  "ordered_cost",
+  "invoiced_cost"
+ ],
+ "fields": [
+  {
+   "fieldname": "phase_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Phase Name",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "sequence",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Sequence"
+  },
+  {
+   "default": "Open",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Open\nIn Progress\nCompleted"
+  },
+  {
+   "fieldname": "column_break_dates",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "expected_start_date",
+   "fieldtype": "Date",
+   "label": "Expected Start Date"
+  },
+  {
+   "fieldname": "expected_end_date",
+   "fieldtype": "Date",
+   "label": "Expected End Date"
+  },
+  {
+   "fieldname": "actual_start_date",
+   "fieldtype": "Date",
+   "label": "Actual Start Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "actual_end_date",
+   "fieldtype": "Date",
+   "label": "Actual End Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_hours",
+   "fieldtype": "Section Break",
+   "label": "Hours & Cost"
+  },
+  {
+   "default": "0",
+   "fieldname": "expected_hours",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Expected Hours",
+   "precision": "2"
+  },
+  {
+   "default": "0",
+   "fieldname": "actual_hours",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Actual Hours",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_cost",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "expected_cost",
+   "fieldtype": "Currency",
+   "label": "Expected Cost"
+  },
+  {
+   "default": "0",
+   "fieldname": "ordered_cost",
+   "fieldtype": "Currency",
+   "label": "Ordered Cost",
+   "read_only": 1,
+   "description": "Total from submitted Purchase Orders"
+  },
+  {
+   "default": "0",
+   "fieldname": "invoiced_cost",
+   "fieldtype": "Currency",
+   "label": "Invoiced Cost",
+   "read_only": 1,
+   "description": "Total from submitted Purchase Invoices"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-06 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Solede Project",
+ "name": "Project Phase",
+ "owner": "Administrator",
+ "permissions": [],
+ "search_fields": "phase_name",
+ "show_title_field_in_link": 1,
+ "sort_field": "sequence",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "phase_name"
+}

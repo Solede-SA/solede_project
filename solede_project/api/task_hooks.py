@@ -75,3 +75,15 @@ def reopen_parent_task_if_needed(doc, method=None):
             parent.status = "Open"
             parent.save()
             frappe.msgprint(f"Parent task {parent.name} has been reopened because task {doc.name} is {doc.status}")
+
+
+def update_phase_totals(doc, method=None):
+    """
+    Hook: on_update
+    Aggiorna i totali della fase quando un Task con project_phase viene salvato
+    """
+    if not doc.project_phase:
+        return
+
+    from solede_project.api.project_phase_api import update_phase_actuals
+    update_phase_actuals(doc.project_phase)
