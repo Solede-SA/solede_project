@@ -151,8 +151,8 @@
    "type": "Link"
   }
  ],
- "modified": "2025-11-11 22:02:47.354640",
- "modified_by": "lorenzo@solede.com",
+ "modified": "2026-02-10 12:46:33.989633",
+ "modified_by": "Administrator",
  "module": "Solede Project",
  "name": "Solede Projects",
  "number_cards": [],
@@ -161,7 +161,7 @@
  "public": 1,
  "quick_lists": [],
  "roles": [],
- "sequence_id": 39.0,
+ "sequence_id": 23.0,
  "shortcuts": [
   {
    "color": "Grey",
