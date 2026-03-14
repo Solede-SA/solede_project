@@ -1,0 +1,21 @@
+{
+ "app": "solede_project",
+ "creation": "2026-03-14 12:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "project",
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "Solede Projects",
+ "link_to": "Solede Projects",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-03-14 12:00:00.000000",
+ "modified_by": "Administrator",
+ "name": "Solede Projects",
+ "owner": "Administrator",
+ "parent_icon": "",
+ "restrict_removal": 0,
+ "roles": [],
+ "standard": 1
+}
