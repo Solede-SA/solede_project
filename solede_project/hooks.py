@@ -333,11 +333,5 @@ fixtures = [
             ["app", "=", "solede_project"],
         ],
     },
-    {
-        "dt": "Workspace Sidebar",
-        "filters": [
-            ["app", "=", "solede_project"],
-        ],
-    },
 ]
 
